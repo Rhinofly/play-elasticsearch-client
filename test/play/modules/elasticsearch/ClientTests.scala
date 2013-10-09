@@ -9,6 +9,8 @@ import org.specs2.time.NoTimeConversions
 import scala.util.Failure
 import scala.concurrent.Awaitable
 import play.api.test.Helpers._
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 
 object ClientTests extends Specification with NoTimeConversions {
 
@@ -16,11 +18,15 @@ object ClientTests extends Specification with NoTimeConversions {
 
   "Client" should {
 
+    br
+
     "have a health method that returns the health of the server" in {
       val result = awaitResult(testClient.health)
 
       (result.json \ "cluster_name").as[String] === "elasticsearch"
     }
+
+    br
 
     "have a create index method" >> {
 
@@ -32,7 +38,7 @@ object ClientTests extends Specification with NoTimeConversions {
 
       "that throws an exception if an index exists" in {
 
-        val futureResponse = testClient.createIndex(name = testIndexName)
+        val futureResponse = testIndex.create
 
         isException(futureResponse, BAD_REQUEST, testIndexName)
       }
@@ -46,23 +52,38 @@ object ClientTests extends Specification with NoTimeConversions {
       }
 
       "that fails on an unexisting index" in {
-        val futureResponse = testClient.deleteIndex(name = testIndexName)
+        val futureResponse = testIndex.delete
 
         isException(futureResponse, NOT_FOUND, testIndexName)
       }
     }
 
-    "have an index exists method" in {
-      createTestIndex
-      existsTestIndex === true
-      deleteTestIndex
-      existsTestIndex === false
+    "have an index exists method" >> {
+
+      "that returns true for an existing index" in {
+        createTestIndex
+        existsTestIndex === true
+      }
+
+      "that returns false for a non-existing index" in {
+        deleteTestIndex
+        existsTestIndex === false
+      }
+    }
+
+    "have a put method to add a document to an index and type" in {
+      testIndex(typeName = testTypeName).put(doc = Json.obj(
+        "test" -> Json.obj(
+          "aasdasd" -> Json.arr(
+            "adasd"))))
+      todo
     }
   }
 
-  def createTestIndex = awaitResult(testClient.createIndex(name = testIndexName))
-  def deleteTestIndex = awaitResult(testClient.deleteIndex(name = testIndexName))
-  def existsTestIndex = awaitResult(testClient.existsIndex(name = testIndexName))
+  def testIndex = testClient(indexName = testIndexName)
+  def createTestIndex = awaitResult(testIndex.create)
+  def deleteTestIndex = awaitResult(testIndex.delete)
+  def existsTestIndex = awaitResult(testIndex.exists)
 
   def isException(futureResponse: Future[Response], status: Int, stringInError: String) = {
     val result = Await.ready(futureResponse, 5.seconds).value
@@ -77,4 +98,5 @@ object ClientTests extends Specification with NoTimeConversions {
 
   val testClient = new Client(url = "http://localhost:9200")
   val testIndexName = "indexname"
+  val testTypeName = "typename"
 }
