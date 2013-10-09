@@ -1,58 +1,71 @@
 package play.modules.elasticsearch
 
 import scala.concurrent.Future
+
+import play.api.http.ContentTypeOf
+import play.api.http.Writeable
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsValue
+import play.api.libs.json.Reads
+import play.api.libs.json.Writes
 import play.api.libs.ws.Response
 import play.api.libs.ws.WS
-import play.api.http.HeaderNames
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.JsObject
 
-class Client(url: String) {
+class Client(elasticSearchUrl: String) {
 
-  def health: Future[Response] =
-    WS.url(url + "/_cluster/health").get()
+  val normalizedUrl =
+    elasticSearchUrl + (if (elasticSearchUrl.last == '/') "" else '/')
+
+  def url(path: String = "") = WS.url(normalizedUrl + path)
+
+  def health: Future[JsObject] =
+    url("_cluster/health").get().map(fromJsonOrError[JsObject])
 
   def apply(indexName: String) = Index(indexName)
-  def index = apply _
+  val index = apply _
 
   case class Index(name: String) {
-    val indexUrl = WS.url(url + s"/$name/")
+    def url(implicit path: String = "") = Client.this.url(name + '/' + path)
 
-    def create: Future[Response] =
-      indexUrl
-        .put(Array.empty[Byte])
-        .map(responseOrError)
+    def create: Future[Unit] =
+      url.put(Array.empty[Byte]).map(unitOrError)
 
-    def delete: Future[Response] =
-      indexUrl
-        .delete
-        .map(responseOrError)
+    def delete: Future[Unit] =
+      url.delete.map(unitOrError)
 
     def exists: Future[Boolean] =
-      indexUrl
-        .head
-        .map(_.status == 200)
-        
-    def apply(typeName:String) = Type(typeName)
-  }
+      url.head.map(_.status == 200)
 
-  case class Type(name:String) {
-    
-    def put(doc:JsObject):Future[Response] = 
-      ???
-    
-  }
-  
-  private def responseOrError(response: Response) =
-    response.status match {
-      case 200 => response
-      case _ => {
-        val json = response.json
-        throw Client.ElasticSearchException((json \ "status").as[Int], (json \ "error").as[String])
+    def apply(typeName: String) = Type(typeName)
+
+    case class Type(name: String) {
+
+      def url(path: String) = Index.this.url(name + '/' + path)
+
+      def put[T : Writes](id: String, doc: T)(implicit w:Writeable[T], c:ContentTypeOf[T]): Future[Version] = {
+        url(id).put(doc).map(convertJsonOrError(Version))
       }
-    }
-}
 
-object Client {
-  case class ElasticSearchException(status: Int, message: String) extends RuntimeException(message: String)
+    }
+  }
+
+  private val unitOrError = convertOrError(_ => ()) _
+  private def fromJsonOrError[T: Reads] = convertJsonOrError(_.as[T])
+  private def convertJsonOrError[T](converter: JsValue => T) =
+    convertOrError[T](r => converter(r.json)) _
+
+  private def convertOrError[T](converter: Response => T)(response: Response): T =
+    response.status match {
+      case 200 | 201 => converter(response)
+      case status =>
+        val json = response.json
+        val possibleException =
+          for {
+            status <- (json \ "status").asOpt[Int]
+            error <- (json \ "error").asOpt[String]
+          } yield ElasticSearchException(status, error)
+
+        throw possibleException.getOrElse(new RuntimeException(s"Unknown status code $status with body: ${response.body}"))
+    }
 }
