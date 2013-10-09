@@ -15,6 +15,8 @@ import org.specs2.specification.Scope
 import org.specs2.mutable.Around
 import org.specs2.execute.AsResult
 import org.specs2.execute.Result
+import play.api.libs.json.Writes
+import play.api.libs.json.JsValue
 
 object ClientTests extends Specification with NoTimeConversions {
 
@@ -98,11 +100,25 @@ object ClientTests extends Specification with NoTimeConversions {
 
       "type should" >> {
         "have a put method to add a document to an index and type" in new WithTestIndex {
-          val futureResult =
-            testType.put(id = "test", doc = Json.obj("test" -> "test"))
 
-          val result = awaitResult(futureResult)
-          result === 1
+          val result = testType.put(id = "test", doc = Json.obj("test" -> "test"))
+
+          val version = awaitResult(result)
+          version === 1
+        }
+
+        "have a put method to add a class to an index and type" in new WithTestIndex {
+
+          case class Test(name: String)
+          implicit val testWrites =
+            new Writes[Test] {
+              def writes(t: Test): JsValue = Json.obj("test" -> t.name)
+            }
+
+          val result = testType.put(id = "test", doc = Test("name"))
+
+          val version = awaitResult(result)
+          version === 1
         }
       }
     }

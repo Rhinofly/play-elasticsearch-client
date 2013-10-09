@@ -43,9 +43,8 @@ class Client(elasticSearchUrl: String) {
 
       def url(path: String) = Index.this.url(name + '/' + path)
 
-      def put[T : Writes](id: String, doc: T)(implicit w:Writeable[T], c:ContentTypeOf[T]): Future[Version] = {
-        url(id).put(doc).map(convertJsonOrError(Version))
-      }
+      def put[T](id: String, doc: T)(implicit writer:Writes[T]): Future[Version] =
+        url(id).put(writer.writes(doc)).map(convertJsonOrError(Version))
 
     }
   }
