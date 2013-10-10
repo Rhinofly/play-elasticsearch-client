@@ -1,7 +1,6 @@
 package play.modules.elasticsearch
 
 import scala.concurrent.Future
-
 import play.api.http.ContentTypeOf
 import play.api.http.Writeable
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
@@ -11,22 +10,30 @@ import play.api.libs.json.Reads
 import play.api.libs.json.Writes
 import play.api.libs.ws.Response
 import play.api.libs.ws.WS
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.JsError
 
 class Client(elasticSearchUrl: String) {
+
+  import ResponseHandlers._
 
   val normalizedUrl =
     elasticSearchUrl + (if (elasticSearchUrl.last == '/') "" else '/')
 
   def url(path: String = "") = WS.url(normalizedUrl + path)
 
-  def health: Future[JsObject] =
-    url("_cluster/health").get().map(fromJsonOrError[JsObject])
+  def health: Future[JsObject] = health()
+
+  def health(parameters: Parameter*): Future[JsObject] =
+    url("_cluster/health")
+      .withQueryString(parameters: _*)
+      .get().map(fromJsonOrError[JsObject])
 
   def apply(indexName: String) = Index(indexName)
   val index = apply _
 
   case class Index(name: String) {
-    
+
     def url(implicit path: String = "") = Client.this.url(name + '/' + path)
 
     def create: Future[Unit] =
@@ -44,38 +51,22 @@ class Client(elasticSearchUrl: String) {
 
       def url(implicit path: String = "") = Index.this.url(name + '/' + path)
 
-      def put[T](id: String, doc: T)(implicit writer:Writes[T]): Future[Version] =
-        url(id).put(writer.writes(doc)).map(convertJsonOrError(Version))
-        
-      def post[T](doc: T)(implicit writer: Writes[T]): Future[(Version, Identifier)] =
-        url.post(writer.writes(doc))
-        .map(convertJsonOrError(json => Version(json) -> Identifier(json)))
-        
-      def get[T : Reads](id : Identifier): Future[Option[SearchResult[T]]] =
-        url(id).get().map(response => response.json.asOpt[SearchResult[T]])
+      def put[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Version] =
+        url(id)
+          .withQueryString(parameters: _*)
+          .put(writer.writes(doc)).map(convertJsonOrError(Version))
+
+      def post[T](doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[(Version, Identifier)] =
+        url
+          .withQueryString(parameters: _*)
+          .post(writer.writes(doc))
+          .map(convertJsonOrError(json => Version(json) -> Identifier(json)))
+
+      def get[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[(Version, T)]] =
+        url(id)
+          .withQueryString(parameters: _*)
+          .get().map(ifExists{r => println(r.body);fromJsonOrError[(Version, T)](implicitly[Reads[(Version, T)]])(r)})
 
     }
-    
   }
-
-  private val unitOrError = convertOrError(_ => ()) _
-  
-  private def fromJsonOrError[T: Reads] = convertJsonOrError(_.as[T])
-  
-  private def convertJsonOrError[T](converter: JsValue => T) =
-    convertOrError[T](response => converter(response.json)) _
-
-  private def convertOrError[T](converter: Response => T)(response: Response): T =
-    response.status match {
-      case 200 | 201 => converter(response)
-      case status =>
-        val json = response.json
-        val possibleException =
-          for {
-            status <- (json \ "status").asOpt[Int]
-            error <- (json \ "error").asOpt[String]
-          } yield ElasticSearchException(status, error)
-
-        throw possibleException.getOrElse(new RuntimeException(s"Unknown status code $status with body: ${response.body}"))
-    }
 }

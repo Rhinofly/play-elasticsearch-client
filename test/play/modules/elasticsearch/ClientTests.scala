@@ -35,15 +35,24 @@ object ClientTests extends Specification with NoTimeConversions {
       awaitResult(new Client(testUrl + "/").health) must throwA[Throwable].not
     }
 
-    "have a health method that returns the health of the server" in {
-      val result = testClientHealth
-
-      (result \ "cluster_name").as[String] === "elasticsearch"
-    }
-
     "have an apply and index method to access an index" in {
       testClient("test") must beAnInstanceOf[Client#Index]
       testClient.index("test") must beAnInstanceOf[Client#Index]
+    }
+
+    br
+
+    "have a health method" >> {
+      "that returns the health of the server" in {
+        val result = testClientHealth
+
+        (result \ "cluster_name").as[String] === "elasticsearch"
+      }
+
+      "that accepts parameters" in {
+        val result = awaitResult(testClient.health("level" -> "indices"))
+        (result \ "indices") === Json.obj()
+      }
     }
 
     br
@@ -96,50 +105,85 @@ object ClientTests extends Specification with NoTimeConversions {
 
       "type should" >> {
 
-        "have a put method to add a document with explicit id to an index and type" in new WithTestIndex {
-          val result = testType.put(id = "test", doc = Json.obj("test" -> "test"))
-          val version = awaitResult(result)
-          version === 1
-        }
+        "have a put method" >> {
+          "to add a document with explicit id to an index and type" in new WithTestIndex {
+            val result = testType.put(id = "test", doc = Json.obj("test" -> "test"))
+            val version = awaitResult(result)
+            version === 1
+          }
 
-        "have a put method to add a class to an index and type" in new WithTestIndex {
-          val result = testType.put(id = "test", doc = TestDocument("name"))
-          val version = awaitResult(result)
-          version === 1
-        }
+          "to add a class to an index and type" in new WithTestIndex {
+            val result = testType.put(id = "test", doc = TestDocument("name"))
+            val version = awaitResult(result)
+            version === 1
+          }
 
-        "have a post method to add a document to an index and type and generate an id" in new WithTestIndex {
-          val result = testType.post(doc = Json.obj("test" -> "test"))
-          val (version, identifier) = awaitResult(result)
-          (version === 1) && (identifier !== "")
-        }
-
-        "have a get method to retrieve a document by id from the index and type" in new WithTestIndex {
-
-          val testDocument = TestDocument("name")
-          val (version, identifier) = awaitResult(testType.post(doc = testDocument))
-          val result = testType.get(id = identifier)
-          val optionalTestDocument = awaitResult(result)
-
-          optionalTestDocument must beLike {
-            case Some(SearchResult(index, docType, id, v, source)) =>
-              index === testIndexName
-              docType === testTypeName
-              id === identifier
-              v === version
-              source === testDocument
+          "that accepts parameters" in new WithTestIndex {
+            val result = testType.put(id = "test", doc = TestDocument("name"),
+              "version" -> "2",
+              "version_type" -> "external")
+            val version = awaitResult(result)
+            version === 2
           }
         }
 
+        "have a post method" >> {
+          "to add a document to an index and type and generate an id" in new WithTestIndex {
+            val result = testType.post(doc = Json.obj("test" -> "test"))
+            val (version, identifier) = awaitResult(result)
+            (version === 1) && (identifier !== "")
+          }
+
+          "that accepts parameters" in new WithTestIndex {
+            val result = testType.post(doc = Json.obj("test" -> "test"),
+              "version" -> "2",
+              "version_type" -> "external")
+
+            val (version, _) = awaitResult(result)
+            (version === 2)
+          }
+        }
+
+        "have a get method" >> {
+
+          "to retrieve a document by id from the index and type" in new WithTestIndex {
+
+            val testDocument = TestDocument("name")
+            val (version, identifier) = awaitResult(testType.post(doc = testDocument))
+            val result = testType.get[TestDocument](id = identifier)
+            val optionalTestDocument = awaitResult(result)
+
+            optionalTestDocument must beLike {
+              case Some((v, doc)) =>
+                v === version
+                doc === testDocument
+            }
+          }
+
+          "to retrieve nothing for an unexisting id from the index and type" in new WithTestIndex {
+            awaitResult(testType.post(doc = TestDocument("name")))
+            val result = testType.get[TestDocument](id = "non-existing")
+            val optionalTestDocument = awaitResult(result)
+
+            optionalTestDocument === None
+          }
+          
+          "that accepts parameters" in new WithTestIndex {
+            val (_, id) = awaitResult(testType.post(doc = Json.obj("name" -> "name", "test" -> "test")))
+            val result = testType.get[JsObject](id, "fields" -> "name")
+            val Some((_, optionalTestDocument)) = awaitResult(result)
+
+            optionalTestDocument === Json.obj("name" -> "name")
+          }
+        }
       }
     }
-
   }
 
   val testClient = new Client(elasticSearchUrl = testUrl)
   val testIndexName = "indexname"
   val testTypeName = "typename"
-  val defaultTimeout = 2.seconds
+  val defaultTimeout = 5.seconds
   def testClientHealth = awaitResult(testClient.health)
   def testIndex = testClient(indexName = testIndexName)
   def testType = testIndex(typeName = testTypeName)
@@ -158,10 +202,11 @@ object ClientTests extends Specification with NoTimeConversions {
   def awaitResult[T](t: Awaitable[T]) =
     Await.result(t, defaultTimeout)
 
-  def isException(futureResponse: Future[_], status: Int, stringInError: String) = {
+  def isException(futureResponse: Future[_], expectedStatus: Int, stringInError: String) = {
     val result = Await.ready(futureResponse, defaultTimeout).value
     result must beLike {
-      case Some(Failure(ElasticSearchException(status, error))) =>
+      case Some(Failure(ElasticSearchException(status, error, _))) =>
+        status === expectedStatus
         error must contain(stringInError)
     }
   }
