@@ -75,7 +75,6 @@ object ClientTests extends Specification with NoTimeConversions {
           isException(futureResponse, NOT_FOUND, testIndexName)
         }
       }
-      
 
       "have an exists method" >> {
 
@@ -88,7 +87,7 @@ object ClientTests extends Specification with NoTimeConversions {
           deleteTestIndex
           existsTestIndex === false
         }
-        
+
       }
 
       "have an apply method to access a type" in {
@@ -96,7 +95,7 @@ object ClientTests extends Specification with NoTimeConversions {
       }
 
       "type should" >> {
-        
+
         "have a put method to add a document with explicit id to an index and type" in new WithTestIndex {
           val result = testType.put(id = "test", doc = Json.obj("test" -> "test"))
           val version = awaitResult(result)
@@ -108,19 +107,28 @@ object ClientTests extends Specification with NoTimeConversions {
           val version = awaitResult(result)
           version === 1
         }
-        
+
         "have a post method to add a document to an index and type and generate an id" in new WithTestIndex {
           val result = testType.post(doc = Json.obj("test" -> "test"))
           val (version, identifier) = awaitResult(result)
           (version === 1) && (identifier !== "")
         }
-        
+
         "have a get method to retrieve a document by id from the index and type" in new WithTestIndex {
-          val (version, identifier) = awaitResult(testType.post(doc = TestDocument("name")))
-          val getRequest = testType.get(id = identifier)
-          val result = awaitResult(getRequest)
-          (result.get.id === identifier) &&
-          (result.get.version === 1)
+
+          val testDocument = TestDocument("name")
+          val (version, identifier) = awaitResult(testType.post(doc = testDocument))
+          val result = testType.get(id = identifier)
+          val optionalTestDocument = awaitResult(result)
+
+          optionalTestDocument must beLike {
+            case Some(SearchResult(index, docType, id, v, source)) =>
+              index === testIndexName
+              docType === testTypeName
+              id === identifier
+              v === version
+              source === testDocument
+          }
         }
 
       }
@@ -138,15 +146,15 @@ object ClientTests extends Specification with NoTimeConversions {
   def createTestIndex = awaitResult(testIndex.create)
   def deleteTestIndex = awaitResult(testIndex.delete)
   def existsTestIndex = awaitResult(testIndex.exists)
-  
+
   case class TestDocument(name: String)
   implicit val testWrites =
     new Writes[TestDocument] {
       def writes(t: TestDocument): JsValue = Json.obj("test" -> t.name)
     }
-  implicit val testReads :Reads[TestDocument] = 
-      (__ \ 'test).read[String].map(TestDocument.apply _)
-    
+  implicit val testReads: Reads[TestDocument] =
+    (__ \ 'test).read[String].map(TestDocument.apply _)
+
   def awaitResult[T](t: Awaitable[T]) =
     Await.result(t, defaultTimeout)
 
