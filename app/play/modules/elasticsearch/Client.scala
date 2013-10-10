@@ -47,8 +47,11 @@ class Client(elasticSearchUrl: String) {
       def put[T](id: String, doc: T)(implicit writer:Writes[T]): Future[Version] =
         url(id).put(writer.writes(doc)).map(convertJsonOrError(Version))
         
-      def post[T](doc: T)(implicit writer:Writes[T]): Future[Version] =
-        url("").post(writer.writes(doc)).map(convertJsonOrError(Version))
+      def post[T](doc: T)(implicit writer: Writes[T]): Future[(Version, Identifier)] =
+        url("").post(writer.writes(doc)).map(convertJsonOrError(json => (Version(json), Identifier(json))))
+        
+      def get[T : Reads](id : Identifier): Future[Option[SearchResult[T]]] =
+        url(id).get().map(response => response.json.as[SearchResult[T]]) // gaat fout omdat de implicit Reads in SearchResult.scala niet klopt
 
     }
     

@@ -15,8 +15,7 @@ import org.specs2.specification.Scope
 import org.specs2.mutable.Around
 import org.specs2.execute.AsResult
 import org.specs2.execute.Result
-import play.api.libs.json.Writes
-import play.api.libs.json.JsValue
+import play.api.libs.json._
 
 object ClientTests extends Specification with NoTimeConversions {
 
@@ -105,20 +104,23 @@ object ClientTests extends Specification with NoTimeConversions {
         }
 
         "have a put method to add a class to an index and type" in new WithTestIndex {
-          case class Test(name: String)
-          implicit val testWrites =
-            new Writes[Test] {
-              def writes(t: Test): JsValue = Json.obj("test" -> t.name)
-            }
-          val result = testType.put(id = "test", doc = Test("name"))
+          val result = testType.put(id = "test", doc = TestDocument("name"))
           val version = awaitResult(result)
           version === 1
         }
         
         "have a post method to add a document to an index and type and generate an id" in new WithTestIndex {
           val result = testType.post(doc = Json.obj("test" -> "test"))
-          val version = awaitResult(result)
-          version === 1
+          val (version, identifier) = awaitResult(result)
+          (version === 1) && (identifier !== "")
+        }
+        
+        "have a get method to retrieve a document by id from the index and type" in new WithTestIndex {
+          val (version, identifier) = awaitResult(testType.post(doc = TestDocument("name")))
+          val getRequest = testType.get(id = identifier)
+          val result = awaitResult(getRequest)
+          (result.get.id === identifier) &&
+          (result.get.version === 1)
         }
 
       }
@@ -136,7 +138,15 @@ object ClientTests extends Specification with NoTimeConversions {
   def createTestIndex = awaitResult(testIndex.create)
   def deleteTestIndex = awaitResult(testIndex.delete)
   def existsTestIndex = awaitResult(testIndex.exists)
-
+  
+  case class TestDocument(name: String)
+  implicit val testWrites =
+    new Writes[TestDocument] {
+      def writes(t: TestDocument): JsValue = Json.obj("test" -> t.name)
+    }
+  implicit val testReads :Reads[TestDocument] = 
+      (__ \ 'test).read[String].map(TestDocument.apply _)
+    
   def awaitResult[T](t: Awaitable[T]) =
     Await.result(t, defaultTimeout)
 
