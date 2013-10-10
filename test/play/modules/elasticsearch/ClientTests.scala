@@ -54,15 +54,12 @@ object ClientTests extends Specification with NoTimeConversions {
       "have a create method" >> {
 
         "that creates an index" in {
-
           val result = createTestIndex
           result === ()
         }
 
         "that throws an exception if an index exists" in {
-
           val futureResponse = testIndex.create
-
           isException(futureResponse, BAD_REQUEST, testIndexName)
         }
       }
@@ -76,10 +73,10 @@ object ClientTests extends Specification with NoTimeConversions {
 
         "that fails on an unexisting index" in {
           val futureResponse = testIndex.delete
-
           isException(futureResponse, NOT_FOUND, testIndexName)
         }
       }
+      
 
       "have an exists method" >> {
 
@@ -92,6 +89,7 @@ object ClientTests extends Specification with NoTimeConversions {
           deleteTestIndex
           existsTestIndex === false
         }
+        
       }
 
       "have an apply method to access a type" in {
@@ -99,27 +97,30 @@ object ClientTests extends Specification with NoTimeConversions {
       }
 
       "type should" >> {
-        "have a put method to add a document to an index and type" in new WithTestIndex {
-
+        
+        "have a put method to add a document with explicit id to an index and type" in new WithTestIndex {
           val result = testType.put(id = "test", doc = Json.obj("test" -> "test"))
-
           val version = awaitResult(result)
           version === 1
         }
 
         "have a put method to add a class to an index and type" in new WithTestIndex {
-
           case class Test(name: String)
           implicit val testWrites =
             new Writes[Test] {
               def writes(t: Test): JsValue = Json.obj("test" -> t.name)
             }
-
           val result = testType.put(id = "test", doc = Test("name"))
-
           val version = awaitResult(result)
           version === 1
         }
+        
+        "have a post method to add a document to an index and type and generate an id" in new WithTestIndex {
+          val result = testType.post(doc = Json.obj("test" -> "test"))
+          val version = awaitResult(result)
+          version === 1
+        }
+
       }
     }
 

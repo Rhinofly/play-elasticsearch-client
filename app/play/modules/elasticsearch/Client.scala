@@ -26,6 +26,7 @@ class Client(elasticSearchUrl: String) {
   val index = apply _
 
   case class Index(name: String) {
+    
     def url(implicit path: String = "") = Client.this.url(name + '/' + path)
 
     def create: Future[Unit] =
@@ -45,14 +46,20 @@ class Client(elasticSearchUrl: String) {
 
       def put[T](id: String, doc: T)(implicit writer:Writes[T]): Future[Version] =
         url(id).put(writer.writes(doc)).map(convertJsonOrError(Version))
+        
+      def post[T](doc: T)(implicit writer:Writes[T]): Future[Version] =
+        url("").post(writer.writes(doc)).map(convertJsonOrError(Version))
 
     }
+    
   }
 
   private val unitOrError = convertOrError(_ => ()) _
+  
   private def fromJsonOrError[T: Reads] = convertJsonOrError(_.as[T])
+  
   private def convertJsonOrError[T](converter: JsValue => T) =
-    convertOrError[T](r => converter(r.json)) _
+    convertOrError[T](response => converter(response.json)) _
 
   private def convertOrError[T](converter: Response => T)(response: Response): T =
     response.status match {
