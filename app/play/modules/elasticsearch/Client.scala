@@ -65,7 +65,7 @@ class Client(elasticSearchUrl: String) {
       def get[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[(Version, T)]] =
         url(id)
           .withQueryString(parameters: _*)
-          .get().map(ifExists{r => println(r.body);fromJsonOrError[(Version, T)](implicitly[Reads[(Version, T)]])(r)})
+          .get().map(ifExists(fromJsonOrError[(Version, T)]))
 
     }
   }

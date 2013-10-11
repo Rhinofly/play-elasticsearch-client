@@ -107,39 +107,36 @@ object ClientTests extends Specification with NoTimeConversions {
 
         "have a put method" >> {
           "to add a document with explicit id to an index and type" in new WithTestIndex {
-            val result = testType.put(id = "test", doc = Json.obj("test" -> "test"))
-            val version = awaitResult(result)
+            val version = put(id = "test", doc = Json.obj("test" -> "test"))
             version === 1
           }
 
           "to add a class to an index and type" in new WithTestIndex {
-            val result = testType.put(id = "test", doc = TestDocument("name"))
-            val version = awaitResult(result)
+            val version = put("test", TestDocument("name"))
             version === 1
           }
 
           "that accepts parameters" in new WithTestIndex {
-            val result = testType.put(id = "test", doc = TestDocument("name"),
-              "version" -> "2",
-              "version_type" -> "external")
-            val version = awaitResult(result)
+            val version =
+              put("test", TestDocument("name"),
+                "version" -> "2",
+                "version_type" -> "external")
             version === 2
           }
         }
 
         "have a post method" >> {
           "to add a document to an index and type and generate an id" in new WithTestIndex {
-            val result = testType.post(doc = Json.obj("test" -> "test"))
-            val (version, identifier) = awaitResult(result)
+            val (version, identifier) = post(doc = Json.obj("test" -> "test"))
             (version === 1) && (identifier !== "")
           }
 
           "that accepts parameters" in new WithTestIndex {
-            val result = testType.post(doc = Json.obj("test" -> "test"),
-              "version" -> "2",
-              "version_type" -> "external")
+            val (version, _) =
+              post(Json.obj("test" -> "test"),
+                "version" -> "2",
+                "version_type" -> "external")
 
-            val (version, _) = awaitResult(result)
             (version === 2)
           }
         }
@@ -149,9 +146,8 @@ object ClientTests extends Specification with NoTimeConversions {
           "to retrieve a document by id from the index and type" in new WithTestIndex {
 
             val testDocument = TestDocument("name")
-            val (version, identifier) = awaitResult(testType.post(doc = testDocument))
-            val result = testType.get[TestDocument](id = identifier)
-            val optionalTestDocument = awaitResult(result)
+            val (version, id) = post(doc = testDocument)
+            val optionalTestDocument = get[TestDocument](id = id)
 
             optionalTestDocument must beLike {
               case Some((v, doc)) =>
@@ -161,17 +157,15 @@ object ClientTests extends Specification with NoTimeConversions {
           }
 
           "to retrieve nothing for an unexisting id from the index and type" in new WithTestIndex {
-            awaitResult(testType.post(doc = TestDocument("name")))
-            val result = testType.get[TestDocument](id = "non-existing")
-            val optionalTestDocument = awaitResult(result)
+            post(TestDocument("name"))
+            val optionalTestDocument = get[TestDocument](id = "non-existing")
 
             optionalTestDocument === None
           }
-          
+
           "that accepts parameters" in new WithTestIndex {
-            val (_, id) = awaitResult(testType.post(doc = Json.obj("name" -> "name", "test" -> "test")))
-            val result = testType.get[JsObject](id, "fields" -> "name")
-            val Some((_, optionalTestDocument)) = awaitResult(result)
+            val (_, id) = post(Json.obj("name" -> "name", "test" -> "test"))
+            val Some((_, optionalTestDocument)) = get[JsObject](id, "fields" -> "name")
 
             optionalTestDocument === Json.obj("name" -> "name")
           }
@@ -180,16 +174,23 @@ object ClientTests extends Specification with NoTimeConversions {
     }
   }
 
+  val defaultTimeout = 5.seconds
+
   val testClient = new Client(elasticSearchUrl = testUrl)
   val testIndexName = "indexname"
   val testTypeName = "typename"
-  val defaultTimeout = 5.seconds
-  def testClientHealth = awaitResult(testClient.health)
+
   def testIndex = testClient(indexName = testIndexName)
   def testType = testIndex(typeName = testTypeName)
+
+  def testClientHealth = awaitResult(testClient.health)
   def createTestIndex = awaitResult(testIndex.create)
   def deleteTestIndex = awaitResult(testIndex.delete)
   def existsTestIndex = awaitResult(testIndex.exists)
+
+  def post[T: Writes](doc: T, parameters: Parameter*) = awaitResult(testType.post(doc = doc, parameters: _*))
+  def get[T: Reads](id: String, parameters: Parameter*) = awaitResult(testType.get[T](id = id, parameters: _*))
+  def put[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.put(id = id, doc = doc, parameters: _*))
 
   case class TestDocument(name: String)
   implicit val testWrites =
