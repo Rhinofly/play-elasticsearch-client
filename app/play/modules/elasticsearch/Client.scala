@@ -54,7 +54,8 @@ class Client(elasticSearchUrl: String) {
       def put[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Version] =
         url(id)
           .withQueryString(parameters: _*)
-          .put(writer.writes(doc)).map(convertJsonOrError(Version))
+          .put(writer.writes(doc))
+          .map(convertJsonOrError(Version))
 
       def post[T](doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[(Version, Identifier)] =
         url
@@ -65,8 +66,14 @@ class Client(elasticSearchUrl: String) {
       def get[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[(Version, T)]] =
         url(id)
           .withQueryString(parameters: _*)
-          .get().map(ifExists(fromJsonOrError[(Version, T)]))
+          .get()
+          .map(ifExists(fromJsonOrError[(Version, T)]))
 
+      def delete[T](id: Identifier, parameters: Parameter*): Future[Boolean] =
+        url(id)
+          .withQueryString(parameters: _*)
+          .delete()
+          .map(convertJsonOrError(json => (json \ "ok").as[Boolean]))
     }
   }
 }

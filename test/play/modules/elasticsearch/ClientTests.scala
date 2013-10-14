@@ -16,6 +16,7 @@ import org.specs2.mutable.Around
 import org.specs2.execute.AsResult
 import org.specs2.execute.Result
 import play.api.libs.json._
+import org.apache.xalan.xsltc.cmdline.getopt.GetOpt
 
 object ClientTests extends Specification with NoTimeConversions {
 
@@ -45,13 +46,12 @@ object ClientTests extends Specification with NoTimeConversions {
     "have a health method" >> {
       "that returns the health of the server" in {
         val result = testClientHealth
-
         (result \ "cluster_name").as[String] === "elasticsearch"
       }
 
       "that accepts parameters" in {
-        val result = awaitResult(testClient.health("level" -> "indices"))
-        (result \ "indices") === Json.obj()
+        val result = awaitResult(testClient.health("wait_for_status" -> "green"))
+         (result \ "cluster_name").as[String] === "elasticsearch"
       }
     }
 
@@ -111,7 +111,7 @@ object ClientTests extends Specification with NoTimeConversions {
             version === 1
           }
 
-          "to add a class to an index and type" in new WithTestIndex {
+          "to add a document to an index and type" in new WithTestIndex {
             val version = put("test", TestDocument("name"))
             version === 1
           }
@@ -136,7 +136,6 @@ object ClientTests extends Specification with NoTimeConversions {
               post(Json.obj("test" -> "test"),
                 "version" -> "2",
                 "version_type" -> "external")
-
             (version === 2)
           }
         }
@@ -157,19 +156,27 @@ object ClientTests extends Specification with NoTimeConversions {
           }
 
           "to retrieve nothing for an unexisting id from the index and type" in new WithTestIndex {
-            post(TestDocument("name"))
+            //post(TestDocument("name"))
             val optionalTestDocument = get[TestDocument](id = "non-existing")
-
             optionalTestDocument === None
           }
 
           "that accepts parameters" in new WithTestIndex {
             val (_, id) = post(Json.obj("name" -> "name", "test" -> "test"))
-            val Some((_, optionalTestDocument)) = get[JsObject](id, "fields" -> "name")
-
-            optionalTestDocument === Json.obj("name" -> "name")
+            val Some((_, optionalTestDocument1)) = get[JsObject](id, "fields" -> "name")
+            optionalTestDocument1 === Json.obj("name" -> "name")
           }
         }
+        
+        "have a delete method" >> {
+          "that deletes a document from the index and type" in new WithTestIndex {
+            val version = put(id = "test", doc = Json.obj("test" -> "test"))
+            val deleted = delete("test")
+            val optionalTestDocument = get[TestDocument](id = "test")
+            (version === 1) && deleted && (optionalTestDocument === None)
+          }
+        }
+        
       }
     }
   }
@@ -222,4 +229,5 @@ object ClientTests extends Specification with NoTimeConversions {
       }
     }
   }
+  
 }
