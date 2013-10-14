@@ -12,6 +12,7 @@ import play.api.libs.ws.Response
 import play.api.libs.ws.WS
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsError
+import play.api.libs.json.Json
 
 class Client(elasticSearchUrl: String) {
 
@@ -74,6 +75,13 @@ class Client(elasticSearchUrl: String) {
           .withQueryString(parameters: _*)
           .delete()
           .map(convertJsonOrError(json => (json \ "ok").as[Boolean]))
+          
+      def updateDoc[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Version] =
+        url(id+"/_update")
+          .withQueryString(parameters: _*)
+          .post(Json.obj("doc" -> writer.writes(doc)))
+          .map(convertJsonOrError(Version))
+          
     }
   }
 }

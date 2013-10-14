@@ -9,13 +9,11 @@ import org.specs2.time.NoTimeConversions
 import scala.util.Failure
 import scala.concurrent.Awaitable
 import play.api.test.Helpers._
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
+import play.api.libs.json._
 import org.specs2.specification.Scope
 import org.specs2.mutable.Around
 import org.specs2.execute.AsResult
 import org.specs2.execute.Result
-import play.api.libs.json._
 import org.apache.xalan.xsltc.cmdline.getopt.GetOpt
 
 object ClientTests extends Specification with NoTimeConversions {
@@ -147,7 +145,6 @@ object ClientTests extends Specification with NoTimeConversions {
             val testDocument = TestDocument("name")
             val (version, id) = post(doc = testDocument)
             val optionalTestDocument = get[TestDocument](id = id)
-
             optionalTestDocument must beLike {
               case Some((v, doc)) =>
                 v === version
@@ -169,12 +166,47 @@ object ClientTests extends Specification with NoTimeConversions {
         }
         
         "have a delete method" >> {
+          
           "that deletes a document from the index and type" in new WithTestIndex {
             val version = put(id = "test", doc = Json.obj("test" -> "test"))
-            val deleted = delete("test")
+            val deleted = del("test")
             val optionalTestDocument = get[TestDocument](id = "test")
-            (version === 1) && deleted && (optionalTestDocument === None)
+            (version === 1) && (deleted === true) && (optionalTestDocument === None)
           }
+          
+          "that accepts parameters" in new WithTestIndex {
+            val version = put(id = "test", doc = Json.obj("test" -> "test"))
+            val deleted = del("test", "version" -> version.toString)
+            val optionalTestDocument = get[TestDocument](id = "test")
+            (deleted === true) && (optionalTestDocument === None)            
+          }
+          
+        }
+        
+        "have an updateDoc method" >> {
+          
+          "that updates a document in the index and type" in new WithTestIndex {
+            val version = put(id = "test", doc = Json.obj("test" -> "test"))
+            val nextVersion = updateDoc(id = "test", doc = Json.obj("test" -> "next test"))
+            val optionalTestDocument = get[JsObject](id = "test")
+            optionalTestDocument must beLike {
+              case Some((v, doc)) =>
+                v === nextVersion
+                doc === Json.obj("test" -> "next test")
+            } and (nextVersion === version + 1)
+          }
+          
+          "that can do partial updates" in new WithTestIndex {
+            val version = put(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
+            val nextVersion = updateDoc(id = "test", doc = Json.obj("content" -> "new content"))
+            val optionalTestDocument = get[JsObject](id = "test")
+            optionalTestDocument must beLike {
+              case Some((v, doc)) =>
+                v === nextVersion
+                doc === Json.obj("test" -> "test", "content" -> "new content")
+            }
+          }
+          
         }
         
       }
@@ -198,6 +230,8 @@ object ClientTests extends Specification with NoTimeConversions {
   def post[T: Writes](doc: T, parameters: Parameter*) = awaitResult(testType.post(doc = doc, parameters: _*))
   def get[T: Reads](id: String, parameters: Parameter*) = awaitResult(testType.get[T](id = id, parameters: _*))
   def put[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.put(id = id, doc = doc, parameters: _*))
+  def del[T](id: String, parameters: Parameter*) = awaitResult(testType.delete(id = id, parameters: _*))
+  def updateDoc[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.updateDoc(id = id, doc = doc, parameters: _*))
 
   case class TestDocument(name: String)
   implicit val testWrites =
