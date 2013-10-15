@@ -212,7 +212,7 @@ object ClientTests extends Specification with NoTimeConversions {
         
         "have a search method" >> {
           
-          "that finds a document using a term query" in new WithTestIndex {
+          "that finds a document using a term-query" in new WithTestIndex {
             val testContent = "test has some content"
             val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
             val result = search[JsObject](TermQuery("test", "content"))
@@ -223,8 +223,29 @@ object ClientTests extends Specification with NoTimeConversions {
             }
           }
           
+          "that will not find documents that do not match the term-query" in new WithTestIndex {
+            val testContent = "test has some content"
+            val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
+            val result = search[JsObject](TermQuery("test", "whatever"))
+            result must beLike {
+              case Some((meta, hits)) =>
+                meta.hits === 0
+                hits  === List()
+            }
+          }
+          
+          "that accepts query-properties" in new WithTestIndex {
+            val testContent = "test has some content"
+            val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
+            val result = search[JsObject](TermQuery("test", "content").withVersion(true))
+            result must beLike {
+              case Some((meta, hits)) =>
+                meta.hits === 1
+                hits(0) \ "_source" === Json.obj("test" -> testContent, "version" -> 1)
+            }
+          }
+          
         }
-        
         
       }
     }

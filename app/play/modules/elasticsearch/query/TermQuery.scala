@@ -10,7 +10,7 @@ import play.api.libs.json.Writes
 case class TermQuery(field: String, value: String, boost: Double = -1.0) extends Query {
   
   def withBoost(boost: Double) : TermQuery =
-    new TermQuery(field, value, boost)
+    copy(boost = boost)
   
   def toQueryDSL =
       if (boost < 0.0)
