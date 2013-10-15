@@ -12,3 +12,5 @@ dist
 .settings
 .target
 /.worksheet
+
+/test.sc

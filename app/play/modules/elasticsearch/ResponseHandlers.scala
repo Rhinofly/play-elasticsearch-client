@@ -10,12 +10,19 @@ object ResponseHandlers {
 
   def fromJsonOrError[T: Reads] = convertJsonOrError(_.as[T])
 
+  def optJsonOrError[T: Reads] = convertJsonOrError(_.asOpt[T])
+
   def convertJsonOrError[T](converter: JsValue => T) =
     convertOrError[T](response => converter(response.json))
 
-  def ifExists[T](converter: Response => T): Response => Option[T] = {
-    case response @ Status(404) if existsIsFalse(response) => None
-    case response => Some(converter(response))
+  def ifExists[T](converter: Response => Option[T]): Response => Option[T] = {
+    case response @ Status(404) => None
+    case response => converter(response)
+  }
+  
+  def ifExistsFlag[T](converter: Response => Option[T]): Response => Option[T] = {
+    response =>
+      (response.json \ "exists").asOpt[Boolean].map(if (_) converter(response) else None).getOrElse(None)
   }
 
   def convertOrError[T](converter: Response => T): Response => T = {
@@ -37,7 +44,4 @@ object ResponseHandlers {
       Some(response.status)
   }
 
-  def existsIsFalse(response: Response): Boolean = {
-    (response.json \ "exists").asOpt[Boolean].map(_ == false).getOrElse(false)
-  }
 }

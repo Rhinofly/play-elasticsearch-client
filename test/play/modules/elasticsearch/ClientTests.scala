@@ -1,20 +1,21 @@
 package play.modules.elasticsearch
 
-import org.specs2.mutable.Specification
-import play.api.libs.ws.Response
-import scala.concurrent.Future
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import org.specs2.time.NoTimeConversions
-import scala.util.Failure
-import scala.concurrent.Awaitable
-import play.api.test.Helpers._
-import play.api.libs.json._
-import org.specs2.specification.Scope
-import org.specs2.mutable.Around
+import org.apache.xalan.xsltc.cmdline.getopt.GetOpt
 import org.specs2.execute.AsResult
 import org.specs2.execute.Result
-import org.apache.xalan.xsltc.cmdline.getopt.GetOpt
+import org.specs2.mutable.Around
+import org.specs2.mutable.Specification
+import org.specs2.specification.Scope
+import org.specs2.time.NoTimeConversions
+import scala.concurrent.Await
+import scala.concurrent.Awaitable
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.util.Failure
+import play.api.libs.json._
+import play.api.libs.ws.Response
+import play.api.test.Helpers._
+import play.modules.elasticsearch.query._
 
 object ClientTests extends Specification with NoTimeConversions {
 
@@ -48,7 +49,7 @@ object ClientTests extends Specification with NoTimeConversions {
       }
 
       "that accepts parameters" in {
-        val result = awaitResult(testClient.health("wait_for_status" -> "green"))
+        val result = awaitResult(testClient.health("level" -> "indices"))
          (result \ "cluster_name").as[String] === "elasticsearch"
       }
     }
@@ -153,7 +154,7 @@ object ClientTests extends Specification with NoTimeConversions {
           }
 
           "to retrieve nothing for an unexisting id from the index and type" in new WithTestIndex {
-            //post(TestDocument("name"))
+            post(TestDocument("name")) // existing document, should not be found
             val optionalTestDocument = get[TestDocument](id = "non-existing")
             optionalTestDocument === None
           }
@@ -209,6 +210,22 @@ object ClientTests extends Specification with NoTimeConversions {
           
         }
         
+        "have a search method" >> {
+          
+          "that finds a document using a term query" in new WithTestIndex {
+            val testContent = "test has some content"
+            val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
+            val result = search[JsObject](TermQuery("test", "content"))
+            result must beLike {
+              case Some((meta, hits)) =>
+                meta.hits === 1
+                hits(0) \ "_source" === Json.obj("test" -> testContent)
+            }
+          }
+          
+        }
+        
+        
       }
     }
   }
@@ -232,6 +249,7 @@ object ClientTests extends Specification with NoTimeConversions {
   def put[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.put(id = id, doc = doc, parameters: _*))
   def del[T](id: String, parameters: Parameter*) = awaitResult(testType.delete(id = id, parameters: _*))
   def updateDoc[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.updateDoc(id = id, doc = doc, parameters: _*))
+  def search[T: Reads](query: Query, parameters: Parameter*) = awaitResult(testType.search[T](query = query, parameters : _*))
 
   case class TestDocument(name: String)
   implicit val testWrites =

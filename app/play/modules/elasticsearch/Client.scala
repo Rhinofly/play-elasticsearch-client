@@ -13,6 +13,7 @@ import play.api.libs.ws.WS
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsError
 import play.api.libs.json.Json
+import play.modules.elasticsearch.query.Query
 
 class Client(elasticSearchUrl: String) {
 
@@ -28,7 +29,8 @@ class Client(elasticSearchUrl: String) {
   def health(parameters: Parameter*): Future[JsObject] =
     url("_cluster/health")
       .withQueryString(parameters: _*)
-      .get().map(fromJsonOrError[JsObject])
+      .get()
+      .map(fromJsonOrError[JsObject])
 
   def apply(indexName: String) = Index(indexName)
   val index = apply _
@@ -51,6 +53,8 @@ class Client(elasticSearchUrl: String) {
     case class Type(name: String) {
 
       def url(implicit path: String = "") = Index.this.url(name + '/' + path)
+      
+      /* Document APIs */
 
       def put[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Version] =
         url(id)
@@ -68,7 +72,7 @@ class Client(elasticSearchUrl: String) {
         url(id)
           .withQueryString(parameters: _*)
           .get()
-          .map(ifExists(fromJsonOrError[(Version, T)]))
+          .map(ifExists(ifExistsFlag(optJsonOrError[(Version, T)])))
 
       def delete[T](id: Identifier, parameters: Parameter*): Future[Boolean] =
         url(id)
@@ -82,6 +86,17 @@ class Client(elasticSearchUrl: String) {
           .post(Json.obj("doc" -> writer.writes(doc)))
           .map(convertJsonOrError(Version))
           
+      // No need for method updateScript anticipated.
+    
+      /* Search APIs */
+      
+      def search[T: Reads](query: Query, parameters: Parameter*): Future[Option[(SearchResult, List[T])]] = {
+        url("_search")
+          .withQueryString(parameters: _*)
+          .post(query.toJson) // GET does not accept a http-body in Play2.1.
+          .map(ifExists(optJsonOrError[(SearchResult, List[T])]))
+      }
+      
     }
   }
 }

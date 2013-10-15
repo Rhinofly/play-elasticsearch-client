@@ -30,6 +30,13 @@ package object elasticsearch {
     sourceReader[T] or fieldsReader[T]
 
   implicit def versionAndDocumentReader[T: Reads]: Reads[(Version, T)] = (
-    versionReader and
-    sourceOrFieldsReader[T]).tupled
+      versionReader and
+      sourceOrFieldsReader[T]
+    ).tupled
+      
+  implicit def searchResultReader[T: Reads]: Reads[(SearchResult, List[T])] = (
+      SearchResult.searchResultReads and
+      SearchResult.searchHitsReads[T]
+    ).tupled
+    
 }
