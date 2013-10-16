@@ -49,6 +49,7 @@ class Client(elasticSearchUrl: String) {
     def exists: Future[Boolean] =
       url.head.map(_.status == 200)
       
+    /* Refresh will commit the index and make all documents findable. */
     def refresh: Future[Unit] =
       url("_refresh").post("").map(unitOrError)
 

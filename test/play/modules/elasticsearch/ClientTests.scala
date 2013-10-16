@@ -280,6 +280,23 @@ object ClientTests extends Specification with NoTimeConversions {
             (result1.get.hits_total === 3) && (result2.get.hits_total === 3) && (result3.get.hits_total === 1)
           }
           
+          "that finds documents using a match-query" in new WithTestIndex {
+            put(id = "test1", doc = Json.obj("test" -> "one two three"))
+            put(id = "test2", doc = Json.obj("test" -> "one two"))
+            put(id = "test3", doc = Json.obj("test" -> "two three"))
+            refreshTestIndex
+            val result1 = search[JsObject](MatchQuery(field = "test", value = "one two", operator = Operator.or))
+            val result2 = search[JsObject](MatchQuery(field = "test", value = "one two", operator = Operator.and))
+            val result3 = search[JsObject](MatchQuery(field = "test", value = "one two", matchType = MatchType.phrase))
+            val result4 = search[JsObject](MatchQuery(field = "test", value = "one three"))
+            val result5 = search[JsObject](MatchQuery(field = "test", value = "one three", matchType = MatchType.phrase))
+            (result1.get.hits_total === 3) &&
+            (result2.get.hits_total === 2) &&
+            (result3.get.hits_total === 2) &&
+            (result4.get.hits_total === 3) &&
+            (result5.get.hits_total === 0)
+          }
+          
         }
         
       }

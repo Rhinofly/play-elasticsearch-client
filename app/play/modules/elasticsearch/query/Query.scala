@@ -29,5 +29,7 @@ abstract class Query {
 
   def withSize(size: Int) =
     wrapped.addProperty(("size" -> JsNumber(size)))
-    
+
+  protected def toJsonIfValid[T: Writes](value : T, isValid: T => Boolean) : JsValue =
+    if (isValid(value)) Json.toJson(value) else JsNull
 }
