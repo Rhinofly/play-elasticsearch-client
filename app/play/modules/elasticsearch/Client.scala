@@ -14,6 +14,7 @@ import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsError
 import play.api.libs.json.Json
 import play.modules.elasticsearch.query.Query
+import play.api.libs.json.JsString
 
 class Client(elasticSearchUrl: String) {
 
@@ -47,6 +48,9 @@ class Client(elasticSearchUrl: String) {
 
     def exists: Future[Boolean] =
       url.head.map(_.status == 200)
+      
+    def refresh: Future[Unit] =
+      url("_refresh").post("").map(unitOrError)
 
     def apply(typeName: String) = Type(typeName)
 

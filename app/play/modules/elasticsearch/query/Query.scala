@@ -20,4 +20,10 @@ abstract class Query {
   def withVersion(version: Boolean) =
     wrapped.addProperty(("version" -> JsBoolean(version)))
 
+  def withFrom(from: Int) =
+    wrapped.addProperty(("from" -> JsNumber(from)))
+
+  def withSize(size: Int) =
+    wrapped.addProperty(("size" -> JsNumber(size)))
+    
 }

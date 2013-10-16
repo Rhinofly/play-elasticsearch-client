@@ -97,6 +97,13 @@ object ClientTests extends Specification with NoTimeConversions {
         }
 
       }
+      
+      "have a refresh method" in {
+        createTestIndex
+        val result = refreshTestIndex
+        deleteTestIndex
+        result === ()
+      }
 
       "have an apply method to access a type" in {
         testIndex("test") must beAnInstanceOf[Client#Index#Type]
@@ -215,7 +222,6 @@ object ClientTests extends Specification with NoTimeConversions {
           "that finds a document using a term-query" in new WithTestIndex {
             val testContent = "test has some content"
             val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
-            //println(get[JsObject](id = "test"))
             val result = search[JsObject](TermQuery("test", "content"))
             result must beLike {
               case Some(results) =>
@@ -242,7 +248,23 @@ object ClientTests extends Specification with NoTimeConversions {
             result must beLike {
               case Some(results) =>
                 results.hits_total === 1
-                results.hits(0).version == 1
+                results.hits(0).version == version
+                results.hits(0).source === Json.obj("test" -> testContent)
+            }
+          }
+          
+          "that accepts the query-properties 'from' and 'size'" in new WithTestIndex {
+            val testContent = "test has some content"
+            put(id = "test1", doc = Json.obj("test" -> testContent))
+            put(id = "test2", doc = Json.obj("test" -> testContent))
+            put(id = "test3", doc = Json.obj("test" -> testContent))
+            put(id = "test4", doc = Json.obj("test" -> testContent))
+            refreshTestIndex
+            val result = search[JsObject](TermQuery("test", "content").withFrom(1).withSize(2))
+            result must beLike {
+              case Some(results) =>
+                results.hits_total === 4
+                results.hits.length === 2
                 results.hits(0).source === Json.obj("test" -> testContent)
             }
           }
@@ -266,6 +288,7 @@ object ClientTests extends Specification with NoTimeConversions {
   def createTestIndex = awaitResult(testIndex.create)
   def deleteTestIndex = awaitResult(testIndex.delete)
   def existsTestIndex = awaitResult(testIndex.exists)
+  def refreshTestIndex = awaitResult(testIndex.refresh)
 
   def post[T: Writes](doc: T, parameters: Parameter*) = awaitResult(testType.post(doc = doc, parameters: _*))
   def get[T: Reads](id: String, parameters: Parameter*) = awaitResult(testType.get[T](id = id, parameters: _*))
