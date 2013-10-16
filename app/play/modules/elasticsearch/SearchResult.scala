@@ -14,6 +14,7 @@ case class SearchResult[T] (
 
 case class ResultDocument[T] (
   id: Identifier,
+  version: Option[Version],
   score: Option[Double],
   source: T
 )
@@ -24,7 +25,7 @@ object SearchResult {
       (__ \ "took").read[Int] and
       (__ \ "timed_out").read[Boolean] and
       (__ \ "hits" \ "total").read[Int] and
-      (__ \ "hits" \ "max_score").read[Option[Double]] and
+      (__ \ "hits" \ "max_score").readNullable[Double] and
       (__ \ "hits" \ "hits").read( list[ResultDocument[T]](ResultDocument.resultDocumentReads[T]) )
     )(SearchResult.apply[T] _)
 }
@@ -33,7 +34,8 @@ object ResultDocument {
   
   def resultDocumentReads[T: Reads]: Reads[ResultDocument[T]] = (
       (__ \ "_id").read[Identifier] and
-      (__ \ "_score").read[Option[Double]] and
+      (__ \ "_version").readNullable[Version] and
+      (__ \ "_score").readNullable[Double] and
       (__ \ "_source").read[T]
     )(ResultDocument.apply[T] _)
 
