@@ -90,11 +90,11 @@ class Client(elasticSearchUrl: String) {
     
       /* Search APIs */
       
-      def search[T: Reads](query: Query, parameters: Parameter*): Future[Option[(SearchResult, List[T])]] = {
+      def search[T: Reads](query: Query, parameters: Parameter*): Future[Option[SearchResult[T]]] = {
         url("_search")
           .withQueryString(parameters: _*)
           .post(query.toJson) // GET does not accept a http-body in Play2.1.
-          .map(ifExists(optJsonOrError[(SearchResult, List[T])]))
+          .map(ifExists(optJsonOrError[SearchResult[T]](SearchResult.searchResultReads)))
       }
       
     }
