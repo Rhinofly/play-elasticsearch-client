@@ -2,15 +2,15 @@ package play.modules.elasticsearch.query
 
 import play.api.libs.json._
 
-case class WrappedQuery(wrapped: Query, properties: Map[String, JsValue] = Map()) extends Query {
-
-  def withVersion(version: Boolean) =
-    copy(properties = properties + ("version" -> JsBoolean(version)))
+case class WrappedQuery(query: Query, properties: Map[String, JsValue] = Map()) extends Query {
+  
+  def addProperty(property: (String, JsValue)) =
+    copy(properties = properties + property)
     
-  def toQueryDSL = wrapped.toQueryDSL
+  def toQueryDSL = query.toQueryDSL
   
   override def toJson: JsValue = {
-    JsObject(properties.toSeq ++ Seq("query" -> wrapped.toQueryDSL))
+    JsObject(properties.toSeq ++ Seq("query" -> query.toQueryDSL))
   }
     
 }

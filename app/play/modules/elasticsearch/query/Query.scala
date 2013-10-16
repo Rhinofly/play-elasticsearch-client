@@ -1,16 +1,9 @@
 package play.modules.elasticsearch.query
 
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
-import play.modules.elasticsearch.Parameter
+import play.api.libs.json._
 
 abstract class Query {
   
-//  def withProperties(properties: (String, AnyVal)*) : WrappedQuery = this match {
-//    case query: WrappedQuery => query.withProperties(properties: _*)
-//    case _ => new WrappedQuery(this).withProperties(properties: _*)
-//  }
-
   def toQueryDSL: JsValue
    
   def toJson: JsValue = {
@@ -18,12 +11,13 @@ abstract class Query {
       "query" -> toQueryDSL
     )
   }
-   
-}
 
-object Query {
+  def wrapped : WrappedQuery = this match {
+    case wrapped: WrappedQuery => wrapped
+    case otherQuery => new WrappedQuery(otherQuery)
+  }
   
-  implicit def wrap(q: Query): WrappedQuery =
-    new WrappedQuery(q)
-  
+  def withVersion(version: Boolean) =
+    wrapped.addProperty(("version" -> JsBoolean(version)))
+
 }
