@@ -1,8 +1,6 @@
 package play.modules.elasticsearch.query
 
-import play.api.libs.json.Reads
 import play.api.libs.json.Json
-import play.api.libs.json.Writes
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-term-query.html

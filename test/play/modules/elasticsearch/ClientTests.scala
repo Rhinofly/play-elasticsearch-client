@@ -269,6 +269,17 @@ object ClientTests extends Specification with NoTimeConversions {
             }
           }
           
+          "that finds documents using a terms-query" in new WithTestIndex {
+            put(id = "test1", doc = Json.obj("test" -> "one two three"))
+            put(id = "test2", doc = Json.obj("test" -> "one two"))
+            put(id = "test3", doc = Json.obj("test" -> "two three"))
+            refreshTestIndex
+            val result1 = search[JsObject](TermsQuery("test", Seq("one", "two", "three")))
+            val result2 = search[JsObject](TermsQuery("test", Seq("one", "two", "three"), 2))
+            val result3 = search[JsObject](TermsQuery("test", Seq("one", "two", "three"), 3))
+            (result1.get.hits_total === 3) && (result2.get.hits_total === 3) && (result3.get.hits_total === 1)
+          }
+          
         }
         
       }
