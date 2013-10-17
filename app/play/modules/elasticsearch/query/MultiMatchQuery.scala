@@ -12,7 +12,7 @@ case class MultiMatchQuery(
   matchType : MatchType.Value = MatchType.boolean,
   fuzziness: Double = -3.14,
   slop: Int = 0
-) extends Query {
+) extends AbstractQuery with JsonUtils {
   
   def toQueryDSL =
     Json.obj( "multi_match" -> 
