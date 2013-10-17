@@ -15,34 +15,12 @@ object QueryTests extends Specification with NoTimeConversions {
   sequential
 
   "Query" should {
-
+    
     br
     
-    "when used by the index/type search method" >> {
-      
-      "find a document using a term-query" in new WithTestIndex {
-        val testContent = "test has some content"
-        val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
-        val result = search[JsObject](TermQuery("test", "content"))
-        result must beLike {
-          case Some(results) =>
-            results.hits_total === 1
-            results.hits(0).source === Json.obj("test" -> testContent)
-        }
-      }
-      
-      "not find documents that do not match the term-query" in new WithTestIndex {
-        val testContent = "test has some content"
-        val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
-        val result = search[JsObject](TermQuery("test", "whatever"))
-        result must beLike {
-          case Some(results) =>
-            results.hits_total === 0
-            results.hits  === List()
-        }
-      }
-      
-      "accept the query-property 'version'" in new WithTestIndex {
+    "be used by the search method" >> {    
+          
+      "that accepts the query-property 'version'" in new WithTestIndex {
         val testContent = "test has some content"
         val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
         val result = search[JsObject](TermQuery("test", "content").withVersion(true))
@@ -54,7 +32,7 @@ object QueryTests extends Specification with NoTimeConversions {
         }
       }
       
-      "accept the query-properties 'from' and 'size'" in new WithTestIndex {
+      "that accepts the query-properties 'from' and 'size'" in new WithTestIndex {
         val testContent = "test has some content"
         put(id = "test1", doc = Json.obj("test" -> testContent))
         put(id = "test2", doc = Json.obj("test" -> testContent))
@@ -70,7 +48,39 @@ object QueryTests extends Specification with NoTimeConversions {
         }
       }
       
-      "find documents using a terms-query" in new WithTestIndex {
+    }
+
+    br
+    
+    "have a TermQuery sub-class" >> {
+      
+      "that finds a matching document" in new WithTestIndex {
+        val testContent = "test has some content"
+        val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
+        val result = search[JsObject](TermQuery("test", "content"))
+        result must beLike {
+          case Some(results) =>
+            results.hits_total === 1
+            results.hits(0).source === Json.obj("test" -> testContent)
+        }
+      }
+      
+      "that does not find non-matching documents" in new WithTestIndex {
+        val testContent = "test has some content"
+        val version = put(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
+        val result = search[JsObject](TermQuery("test", "whatever"))
+        result must beLike {
+          case Some(results) =>
+            results.hits_total === 0
+            results.hits  === List()
+        }
+      }
+      
+    }
+    
+    "have a TermsQuery sub-class" >> {
+      
+      "that finds matching documents" in new WithTestIndex {
         put(id = "test1", doc = Json.obj("test" -> "one two three"))
         put(id = "test2", doc = Json.obj("test" -> "one two"))
         put(id = "test3", doc = Json.obj("test" -> "two three"))
@@ -81,27 +91,56 @@ object QueryTests extends Specification with NoTimeConversions {
         (result1.get.hits_total === 3) && (result2.get.hits_total === 3) && (result3.get.hits_total === 1)
       }
       
-      "find documents using a match-query" in new WithTestIndex {
+    }
+    
+    "have a MatchQuery sub-class" >> {
+      
+      "that finds matching documents" in new WithTestIndex {
         put(id = "test1", doc = Json.obj("test" -> "one two three"))
         put(id = "test2", doc = Json.obj("test" -> "one two"))
         put(id = "test3", doc = Json.obj("test" -> "two three"))
         refreshTestIndex
         val result1 = search[JsObject](MatchQuery(field = "test", value = "one two", operator = Operator.or))
         val result2 = search[JsObject](MatchQuery(field = "test", value = "one two", operator = Operator.and))
-        val result3 = search[JsObject](MatchQuery(field = "test", value = "one two", matchType = MatchType.phrase))
-        val result4 = search[JsObject](MatchQuery(field = "test", value = "one three"))
-        val result5 = search[JsObject](MatchQuery(field = "test", value = "one three", matchType = MatchType.phrase))
-        val result6 = search[JsObject](MatchQuery(field = "test", value = "one three", matchType = MatchType.phrase, slop = 1))
+        val result3 = search[JsObject](MatchQuery(field = "test", value = "one three"))
         (result1.get.hits_total === 3) &&
         (result2.get.hits_total === 2) &&
-        (result3.get.hits_total === 2) &&
-        (result4.get.hits_total === 3) &&
-        (result5.get.hits_total === 0) &&
-        (result6.get.hits_total === 1)
+        (result3.get.hits_total === 3)
+      }
+      
+      "that accepts phrase queries" in new WithTestIndex {
+        put(id = "test1", doc = Json.obj("test" -> "one two three"))
+        put(id = "test2", doc = Json.obj("test" -> "one two"))
+        put(id = "test3", doc = Json.obj("test" -> "two three"))
+        refreshTestIndex
+        val result1 = search[JsObject](MatchQuery(field = "test", value = "one two", matchType = MatchType.phrase))
+        val result2 = search[JsObject](MatchQuery(field = "test", value = "one three", matchType = MatchType.phrase))
+        val result3 = search[JsObject](MatchQuery(field = "test", value = "one three", matchType = MatchType.phrase, slop = 1))
+        (result1.get.hits_total === 2) &&
+        (result2.get.hits_total === 0) &&
+        (result3.get.hits_total === 1)
       }
       
     }
-        
+    
+    "have a MultiMatchQuery sub-class" >> {
+      
+      "that finds matching documents" in new WithTestIndex {
+        put(id = "test1", doc = Json.obj("keywords" -> "scala play", "description" -> "Play Framework makes it easy to build web applications with Java & Scala."))
+        put(id = "test2", doc = Json.obj("keywords" -> "node.js express", "description" -> "Express is a minimal and flexible node.js web application framework."))
+        put(id = "test3", doc = Json.obj("keywords" -> "node.js audio", "description" -> "Play sound files from node.js to your speakers."))
+        refreshTestIndex
+        val result1 = search[JsObject](MultiMatchQuery(fields = Seq("keywords", "description"), value = "play"))
+        val result2 = search[JsObject](MultiMatchQuery(fields = Seq("keywords", "description"), value = "play node.js", operator = Operator.and))
+        hasHitIds(result1.get, Set("test1", "test3")) &&
+        hasHitIds(result2.get, Set("test3"))
+      }
+      
+    }
+
   }
+  
+  def hasHitIds[T](result: SearchResult[T], ids: Set[Identifier]) : Boolean =
+    result.hits.map(_.id).toSet === ids
 
 }

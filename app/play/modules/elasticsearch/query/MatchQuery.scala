@@ -24,20 +24,9 @@ case class MatchQuery(
             "type" -> toJsonIfValid(matchType.toString, {x:String => x != MatchType.boolean.toString}),
             "fuzziness" -> toJsonIfValid(fuzziness, {x:Double => x >= 0.0}),
             "slop" -> toJsonIfValid(slop, {x:Int => x > 0})
-          ).filter({case (k, v) => (v != JsNull)})
+          ).filter(isValidJsonProperty)
         )
       )
     )
 
-}
-
-object Operator extends Enumeration {
-  val or = Value("or")
-  val and = Value("and")
-}
-
-object MatchType extends Enumeration {
-  val boolean = Value("boolean")
-  val phrase = Value("phrase")
-  val phrase_prefix = Value("phrase_prefix")
 }
