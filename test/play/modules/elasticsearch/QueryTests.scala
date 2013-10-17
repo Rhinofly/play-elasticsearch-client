@@ -137,6 +137,18 @@ object QueryTests extends Specification with NoTimeConversions {
       }
       
     }
+    
+    "have a MatchAllQuery sub-class" >> {
+      
+      "that finds all documents" in new WithTestIndex {
+        put(id = "test1", doc = Json.obj("test" -> "one two three"))
+        put(id = "test2", doc = Json.obj("test" -> "one two"))
+        refreshTestIndex
+        val result = search[JsObject](MatchAllQuery())
+        result.get.hits_total === 2
+      }
+      
+    }
 
   }
   
