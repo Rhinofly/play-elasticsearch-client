@@ -290,11 +290,13 @@ object ClientTests extends Specification with NoTimeConversions {
             val result3 = search[JsObject](MatchQuery(field = "test", value = "one two", matchType = MatchType.phrase))
             val result4 = search[JsObject](MatchQuery(field = "test", value = "one three"))
             val result5 = search[JsObject](MatchQuery(field = "test", value = "one three", matchType = MatchType.phrase))
+            val result6 = search[JsObject](MatchQuery(field = "test", value = "one three", matchType = MatchType.phrase, slop = 1))
             (result1.get.hits_total === 3) &&
             (result2.get.hits_total === 2) &&
             (result3.get.hits_total === 2) &&
             (result4.get.hits_total === 3) &&
-            (result5.get.hits_total === 0)
+            (result5.get.hits_total === 0) &&
+            (result6.get.hits_total === 1)
           }
           
         }
