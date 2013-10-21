@@ -127,6 +127,11 @@ object QueryTests extends Specification with NoTimeConversions {
     }
 
     "have a MatchAllQuery sub-class" >> {
+      
+      "that finds no documents if none exist" in new WithTestIndex {
+        val result = search[JsObject](MatchAllQuery())
+        result.hitsTotal === 0
+      }
 
       "that finds all documents" in new WithTestIndex {
         put(id = "test1", doc = Json.obj("test" -> "one two three"))

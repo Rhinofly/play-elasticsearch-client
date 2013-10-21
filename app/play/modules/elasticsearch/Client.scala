@@ -48,8 +48,8 @@ class Client(elasticSearchUrl: String) {
     def create: Future[Unit] =
       url.put(Array.empty[Byte]).map(unitOrError)
 
-    def delete: Future[Unit] =
-      url.delete.map(unitOrError)
+    def delete: Future[Boolean] =
+      url.delete.map(found)
 
     def exists: Future[Boolean] =
       url.head.map(found)

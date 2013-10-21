@@ -42,6 +42,7 @@ object ResponseHandlers {
 
   def unknownStatusCode(status: Int, response: Response) =
     new RuntimeException(s"Unknown status code $status with body: ${response.body}")
+  
   object Status {
     def unapply(response: Response): Option[Int] =
       Some(response.status)

@@ -75,12 +75,12 @@ object ClientTests extends Specification with NoTimeConversions {
 
         "that deletes the index" in {
           val result = deleteTestIndex
-          result === ()
+          result === true
         }
 
         "that fails on an unexisting index" in {
-          val futureResponse = testIndex.delete
-          isException(futureResponse, NOT_FOUND, testIndexName)
+          val result = deleteTestIndex
+          result === false
         }
       }
 
