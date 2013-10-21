@@ -16,6 +16,8 @@ import play.api.libs.json.Json
 import play.modules.elasticsearch.query.Query
 import play.api.libs.json.JsString
 
+import scala.language.existentials
+
 class Client(elasticSearchUrl: String) {
 
   import ResponseHandlers._
@@ -47,8 +49,8 @@ class Client(elasticSearchUrl: String) {
       url.delete.map(unitOrError)
 
     def exists: Future[Boolean] =
-      url.head.map(_.status == 200)
-      
+      url.head.map(found)
+
     /* Refresh will commit the index and make all documents findable. */
     def refresh: Future[Unit] =
       url("_refresh").post("").map(unitOrError)
@@ -57,51 +59,62 @@ class Client(elasticSearchUrl: String) {
 
     case class Type(name: String) {
 
-      def url(implicit path: String = "") = Index.this.url(name + '/' + path)
-      
-      /* Document APIs */
+      def url(path: String, parameters: Parameter*) =
+        Index.this.url(name + '/' + path).withQueryString(parameters: _*)
 
-      def put[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Version] =
-        url(id)
-          .withQueryString(parameters: _*)
-          .put(writer.writes(doc))
-          .map(convertJsonOrError(Version))
+      def url(parameters: Parameter*): RequestHolder =
+        url("", parameters: _*)
 
-      def post[T](doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[(Version, Identifier)] =
-        url
-          .withQueryString(parameters: _*)
-          .post(writer.writes(doc))
-          .map(convertJsonOrError(json => Version(json) -> Identifier(json)))
+      def putWithHandler[T, R](handler: Response => R)(id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
+        url(id, parameters: _*).put(writer.writes(doc)).map(handler)
 
-      def get[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[(Version, T)]] =
-        url(id)
-          .withQueryString(parameters: _*)
-          .get()
-          .map(ifExists(ifExistsFlag(optJsonOrError[(Version, T)])))
+      def postWithHandler[T, R](handler: Response => R)(doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
+        url(parameters: _*).post(writer.writes(doc)).map(handler)
+
+      def put[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Unit] =
+        putWithHandler(unitOrError)(id, doc, parameters: _*)
+
+      def putV[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Version] =
+        putWithHandler(convertJsonOrError(Version))(id, doc, parameters: _*)
+
+      def post[T: Writes](doc: T, parameters: Parameter*): Future[Identifier] =
+        postWithHandler(convertJsonOrError(Identifier))(doc, parameters: _*)
+
+      def postV[T](doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[(Identifier, Version)] =
+        postWithHandler(convertJsonOrError(json => (Identifier(json) -> Version(json))))(doc, parameters: _*)
+
+      def get[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[T]] =
+        url(id, parameters: _*)
+          .get().map(ifExists(fromJsonOrError(sourceOrFieldsReader[T])))
+
+      def getV[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[(Version, T)]] =
+        url(id, parameters: _*)
+          .get().map(ifExists(fromJsonOrError[(Version, T)]))
 
       def delete[T](id: Identifier, parameters: Parameter*): Future[Boolean] =
-        url(id)
-          .withQueryString(parameters: _*)
+        url(id, parameters: _*)
           .delete()
-          .map(convertJsonOrError(json => (json \ "ok").as[Boolean]))
-          
-      def updateDoc[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Version] =
-        url(id+"/_update")
-          .withQueryString(parameters: _*)
+          .map(found)
+
+      def merge[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Unit] =
+        url(id + "/_update", parameters: _*)
+          .post(Json.obj("doc" -> writer.writes(doc)))
+          .map(unitOrError)
+
+      def mergeV[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Version] =
+        url(id + "/_update", parameters: _*)
           .post(Json.obj("doc" -> writer.writes(doc)))
           .map(convertJsonOrError(Version))
-          
+
       // No need for method updateScript anticipated.
-    
+
       /* Search APIs */
-      
-      def search[T: Reads](query: Query, parameters: Parameter*): Future[Option[SearchResult[T]]] = {
-        url("_search")
-          .withQueryString(parameters: _*)
+
+      def search[T: Reads](query: Query, parameters: Parameter*): Future[SearchResult[T]] =
+        url("_search", parameters: _*)
           .post(query.toJson) // GET does not accept a http-body in Play2.1.
-          .map(ifExists(optJsonOrError[SearchResult[T]](SearchResult.searchResultReads)))
-      }
-      
+          .map(fromJsonOrError[SearchResult[T]])
+
     }
   }
 }

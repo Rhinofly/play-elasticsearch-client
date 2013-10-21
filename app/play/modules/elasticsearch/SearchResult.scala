@@ -6,9 +6,9 @@ import play.api.libs.json.Reads._
 
 case class SearchResult[T] (
   took: Int,
-  timed_out: Boolean,
-  hits_total : Int,
-  max_score : Option[Double],
+  timedOut: Boolean,
+  hitsTotal : Int,
+  maxScore : Option[Double],
   hits: List[ResultDocument[T]] /* Length may be less than hits_total if query has from and size properties. */
 )
 
@@ -21,18 +21,18 @@ case class ResultDocument[T] (
 
 object SearchResult {
 
-  def searchResultReads[T: Reads]: Reads[SearchResult[T]] = (
+  implicit def searchResultReads[T: Reads]: Reads[SearchResult[T]] = (
       (__ \ "took").read[Int] and
       (__ \ "timed_out").read[Boolean] and
       (__ \ "hits" \ "total").read[Int] and
       (__ \ "hits" \ "max_score").readNullable[Double] and
-      (__ \ "hits" \ "hits").read( list[ResultDocument[T]](ResultDocument.resultDocumentReads[T]) )
+      (__ \ "hits" \ "hits").read( list[ResultDocument[T]] )
     )(SearchResult.apply[T] _)
 }
 
 object ResultDocument {
   
-  def resultDocumentReads[T: Reads]: Reads[ResultDocument[T]] = (
+  implicit def resultDocumentReads[T: Reads]: Reads[ResultDocument[T]] = (
       (__ \ "_id").read[Identifier] and
       (__ \ "_version").readNullable[Version] and
       (__ \ "_score").readNullable[Double] and
