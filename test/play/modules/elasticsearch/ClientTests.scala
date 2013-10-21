@@ -217,7 +217,7 @@ object ClientTests extends Specification with NoTimeConversions {
 
           "that merges a document in the index and type" in new WithTestIndex {
             put(id = "test", doc = Json.obj("test" -> "test"))
-            val nextVersion = merge(id = "test", doc = Json.obj("test" -> "next test"))
+            val nextVersion = update(id = "test", doc = Json.obj("test" -> "next test"))
             val optionalTestDocument = get[JsObject](id = "test")
             optionalTestDocument must beLike {
               case Some((v, doc)) =>
@@ -228,7 +228,7 @@ object ClientTests extends Specification with NoTimeConversions {
 
           "that can do partial updates" in new WithTestIndex {
             put(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
-            merge(id = "test", doc = Json.obj("content" -> "new content"))
+            update(id = "test", doc = Json.obj("content" -> "new content"))
             val optionalTestDocument = get[JsObject](id = "test")
             optionalTestDocument must beLike {
               case Some((_, doc)) =>
@@ -238,7 +238,7 @@ object ClientTests extends Specification with NoTimeConversions {
           
           "that does not return a version" in new WithTestIndex {
             put(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
-            val result = awaitResult(testType.merge(id = "test", doc = Json.obj("content" -> "new content")))
+            val result = awaitResult(testType.update(id = "test", doc = Json.obj("content" -> "new content")))
             result === ()
           }
         }
@@ -265,7 +265,7 @@ object ClientTests extends Specification with NoTimeConversions {
   def get[T: Reads](id: String, parameters: Parameter*) = awaitResult(testType.getV[T](id = id, parameters: _*))
   def put[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.putV(id = id, doc = doc, parameters: _*))
   def del[T](id: String, parameters: Parameter*) = awaitResult(testType.delete(id = id, parameters: _*))
-  def merge[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.mergeV(id = id, doc = doc, parameters: _*))
+  def update[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.updateV(id = id, doc = doc, parameters: _*))
   def search[T: Reads](query: Query, parameters: Parameter*) = awaitResult(testType.search[T](query = query, parameters: _*))
 
   val testDocument = TestDocument("name")

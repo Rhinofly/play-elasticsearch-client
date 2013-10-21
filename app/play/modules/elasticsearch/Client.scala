@@ -96,12 +96,12 @@ class Client(elasticSearchUrl: String) {
           .delete()
           .map(found)
 
-      def merge[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Unit] =
+      def update[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Unit] =
         url(id + "/_update", parameters: _*)
           .post(Json.obj("doc" -> writer.writes(doc)))
           .map(unitOrError)
 
-      def mergeV[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Version] =
+      def updateV[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Version] =
         url(id + "/_update", parameters: _*)
           .post(Json.obj("doc" -> writer.writes(doc)))
           .map(convertJsonOrError(Version))
