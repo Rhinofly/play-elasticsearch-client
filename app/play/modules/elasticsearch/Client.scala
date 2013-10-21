@@ -29,6 +29,7 @@ class Client(elasticSearchUrl: String) {
 
   def health: Future[JsObject] = health()
 
+  /* Health: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/cluster-health.html */
   def health(parameters: Parameter*): Future[JsObject] =
     url("_cluster/health")
       .withQueryString(parameters: _*)
@@ -39,6 +40,8 @@ class Client(elasticSearchUrl: String) {
   val index = apply _
 
   case class Index(name: String) {
+    
+    /* Index APIs: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices.html */
 
     def url(implicit path: String = "") = Client.this.url(name + '/' + path)
 
@@ -71,18 +74,21 @@ class Client(elasticSearchUrl: String) {
       def postWithHandler[T, R](handler: Response => R)(doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
         url(parameters: _*).post(writer.writes(doc)).map(handler)
 
+      /* Index: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-index_.html */
       def put[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Unit] =
         putWithHandler(unitOrError)(id, doc, parameters: _*)
 
       def putV[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Version] =
         putWithHandler(convertJsonOrError(Version))(id, doc, parameters: _*)
 
+      /* Index (automatic id generation): http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-index_.html */
       def post[T: Writes](doc: T, parameters: Parameter*): Future[Identifier] =
         postWithHandler(convertJsonOrError(Identifier))(doc, parameters: _*)
 
       def postV[T](doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[(Identifier, Version)] =
         postWithHandler(convertJsonOrError(json => (Identifier(json) -> Version(json))))(doc, parameters: _*)
 
+      /* Get: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-get.html */
       def get[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[T]] =
         url(id, parameters: _*)
           .get().map(ifExists(fromJsonOrError(sourceOrFieldsReader[T])))
@@ -91,11 +97,13 @@ class Client(elasticSearchUrl: String) {
         url(id, parameters: _*)
           .get().map(ifExists(fromJsonOrError[(Version, T)]))
 
+      /* Delete: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-delete.html */
       def delete[T](id: Identifier, parameters: Parameter*): Future[Boolean] =
         url(id, parameters: _*)
           .delete()
           .map(found)
 
+      /* Update: www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-update.html */
       def update[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Unit] =
         url(id + "/_update", parameters: _*)
           .post(Json.obj("doc" -> writer.writes(doc)))
@@ -108,7 +116,7 @@ class Client(elasticSearchUrl: String) {
 
       // No need for method updateScript anticipated.
 
-      /* Search APIs */
+      /* Search APIs: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search.html */
 
       def search[T: Reads](query: Query, parameters: Parameter*): Future[SearchResult[T]] =
         url("_search", parameters: _*)
