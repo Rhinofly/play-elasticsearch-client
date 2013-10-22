@@ -13,9 +13,11 @@ object ResponseHandlers {
   def convertJsonOrError[T](converter: JsValue => T) =
     convertOrError[T](response => converter(response.json))
 
-  def ifExists[T](converter: Response => T): Response => Option[T] = {
-    case response @ Status(404) => None
-    case response => Some(converter(response))
+  def ifExists[T](converter: Response => T): Response => Option[T] = { response =>
+      if ((response.json \ "exists").asOpt[Boolean] == Some(false))
+        None
+      else
+        Some(converter(response))
   }
 
   def found: Response => Boolean = {

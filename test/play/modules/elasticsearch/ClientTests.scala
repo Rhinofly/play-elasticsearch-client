@@ -175,6 +175,10 @@ object ClientTests extends Specification with NoTimeConversions {
             val optionalTestDocument = get[TestDocument](id = "non-existing")
             optionalTestDocument === None
           }
+          
+          "that throws an exception when retrieving from an index that does not exist"  in {
+            get[TestDocument](id = "anything") must throwA[ElasticSearchException]
+          }
 
           "that accepts parameters" in new WithTestIndex {
             val (id, _) = post(Json.obj("name" -> "name", "test" -> "test"))
