@@ -45,17 +45,17 @@ class Client(elasticSearchUrl: String) {
 
     def url(implicit path: String = "") = Client.this.url(name + '/' + path)
 
-    def create: Future[Unit] =
+    def create(): Future[Unit] =
       url.put(Array.empty[Byte]).map(unitOrError)
 
-    def delete: Future[Boolean] =
+    def delete(): Future[Boolean] =
       url.delete.map(found)
 
     def exists: Future[Boolean] =
       url.head.map(found)
 
     /* Refresh will commit the index and make all documents findable. */
-    def refresh: Future[Unit] =
+    def refresh(): Future[Unit] =
       url("_refresh").post("").map(unitOrError)
 
     def apply(typeName: String) = Type(typeName)
