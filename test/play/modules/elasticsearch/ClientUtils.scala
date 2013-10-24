@@ -39,9 +39,9 @@ trait ClientUtils { self: Specification with NoTimeConversions =>
   def existsTestIndex = awaitResult(testIndex.exists)
   def refreshTestIndex = awaitResult(testIndex.refresh)
 
-  def post[T: Writes](doc: T, parameters: Parameter*) = awaitResult(testType.indexV(doc = doc, parameters: _*))
+  def index[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.indexV(id = id, doc = doc, parameters: _*))
+  def index[T: Writes](doc: T, parameters: Parameter*) = awaitResult(testType.indexV(doc = doc, parameters: _*))
   def get[T: Reads](id: String, parameters: Parameter*) = awaitResult(testType.getV[T](id = id, parameters: _*))
-  def put[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.indexV(id = id, doc = doc, parameters: _*))
   def del[T](id: String, parameters: Parameter*) = awaitResult(testType.delete(id = id, parameters: _*))
   def update[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.updateV(id = id, doc = doc, parameters: _*))
   def search[T: Reads](query: ElasticSearchQuery, parameters: Parameter*) = awaitResult(testType.search[T](query = query, parameters: _*))

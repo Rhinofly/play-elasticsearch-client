@@ -100,20 +100,20 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
 
       "type should" >> {
 
-        "have a put method" >> {
+        "have an index method" >> {
           "to add a document with explicit id to an index and type" in new WithTestIndex {
-            val version = put(id = "test", doc = Json.obj("test" -> "test"))
+            val version = index(id = "test", doc = Json.obj("test" -> "test"))
             version === 1
           }
 
           "to add a class to an index and type" in new WithTestIndex {
-            val version = put("test", testDocument)
+            val version = index("test", testDocument)
             version === 1
           }
 
           "that accepts parameters" in new WithTestIndex {
             val version =
-              put("test", testDocument,
+              index("test", testDocument,
                 "version" -> "2",
                 "version_type" -> "external")
             version === 2
@@ -124,15 +124,15 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
         }
 
-        "have a post method" >> {
+        "have an index method" >> {
           "to add a document to an index and type and generate an id" in new WithTestIndex {
-            val (identifier, version) = post(doc = Json.obj("test" -> "test"))
+            val (identifier, version) = index(doc = Json.obj("test" -> "test"))
             (version === 1) and (identifier must not beEmpty)
           }
 
           "that accepts parameters" in new WithTestIndex {
             val (_, version) =
-              post(Json.obj("test" -> "test"),
+              index(Json.obj("test" -> "test"),
                 "version" -> "2",
                 "version_type" -> "external")
             (version === 2)
@@ -148,7 +148,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
 
           "to retrieve a document by id from the index and type" in new WithTestIndex {
 
-            val (id, version) = post(doc = testDocument)
+            val (id, version) = index(doc = testDocument)
             val optionalTestDocument = get[TestDocument](id = id)
             optionalTestDocument must beLike {
               case Some((v, doc)) =>
@@ -158,7 +158,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
 
           "to retrieve nothing for an unexisting id from the index and type" in new WithTestIndex {
-            put("non-existing", testDocument)
+            index("non-existing", testDocument)
             del("non-existing")
 
             val optionalTestDocument = get[TestDocument](id = "non-existing")
@@ -170,14 +170,14 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
 
           "that accepts parameters" in new WithTestIndex {
-            val (id, _) = post(Json.obj("name" -> "name", "test" -> "test"))
+            val (id, _) = index(Json.obj("name" -> "name", "test" -> "test"))
             val Some((_, optionalTestDocument)) = get[JsObject](id, "fields" -> "name")
 
             optionalTestDocument === Json.obj("name" -> "name")
           }
 
           "that does not return a version" in new WithTestIndex {
-            val (id, _) = post(testDocument)
+            val (id, _) = index(testDocument)
             val retrievedDocument = awaitResult(testType.get[TestDocument](id))
             retrievedDocument === Some(testDocument)
           }
@@ -186,7 +186,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
         "have a delete method" >> {
 
           "that deletes a document from the index and type" in new WithTestIndex {
-            put(id = "test", doc = Json.obj("test" -> "test"))
+            index(id = "test", doc = Json.obj("test" -> "test"))
             val deleted = del("test")
             val optionalTestDocument = get[TestDocument](id = "test")
             (deleted === true) and (optionalTestDocument === None)
@@ -198,8 +198,8 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
 
           "that accepts parameters" in new WithTestIndex {
-            val firstVersion = put(id = "test", doc = Json.obj("test" -> "test"))
-            put(id = "test", doc = Json.obj("test" -> "test"))
+            val firstVersion = index(id = "test", doc = Json.obj("test" -> "test"))
+            index(id = "test", doc = Json.obj("test" -> "test"))
             del("test", "version" -> firstVersion.toString) must throwAn[ElasticSearchException].like {
               case ElasticSearchException(409, _, _) => ok
             }
@@ -209,7 +209,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
         "have an update method" >> {
 
           "that updates a document in the index and type" in new WithTestIndex {
-            put(id = "test", doc = Json.obj("test" -> "test"))
+            index(id = "test", doc = Json.obj("test" -> "test"))
             val nextVersion = update(id = "test", doc = Json.obj("test" -> "next test"))
             val optionalTestDocument = get[JsObject](id = "test")
             optionalTestDocument must beLike {
@@ -220,7 +220,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
 
           "that can do partial updates" in new WithTestIndex {
-            put(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
+            index(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
             update(id = "test", doc = Json.obj("content" -> "new content"))
             val optionalTestDocument = get[JsObject](id = "test")
             optionalTestDocument must beLike {
@@ -230,7 +230,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
           
           "that does not return a version" in new WithTestIndex {
-            put(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
+            index(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
             val result = awaitResult(testType.update(id = "test", doc = Json.obj("content" -> "new content")))
             result === ()
           }
