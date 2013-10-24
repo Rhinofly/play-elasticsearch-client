@@ -13,9 +13,8 @@ import play.api.libs.ws.WS
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsError
 import play.api.libs.json.Json
-import play.modules.elasticsearch.query.Query
+import play.modules.elasticsearch.query.{Query, ElasticSearchQuery}
 import play.api.libs.json.JsString
-
 import scala.language.existentials
 
 class Client(elasticSearchUrl: String) {
@@ -68,24 +67,24 @@ class Client(elasticSearchUrl: String) {
       def url(parameters: Parameter*): RequestHolder =
         url("", parameters: _*)
 
-      def putWithHandler[T, R](handler: Response => R)(id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
+      private def putWithHandler[T, R](handler: Response => R)(id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
         url(id, parameters: _*).put(writer.writes(doc)).map(handler)
 
-      def postWithHandler[T, R](handler: Response => R)(doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
+      private def postWithHandler[T, R](handler: Response => R)(doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
         url(parameters: _*).post(writer.writes(doc)).map(handler)
 
       /* Index: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-index_.html */
-      def put[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Unit] =
+      def index[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Unit] =
         putWithHandler(unitOrError)(id, doc, parameters: _*)
 
-      def putV[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Version] =
+      def indexV[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Version] =
         putWithHandler(convertJsonOrError(Version))(id, doc, parameters: _*)
 
       /* Index (automatic id generation): http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-index_.html */
-      def post[T: Writes](doc: T, parameters: Parameter*): Future[Identifier] =
+      def index[T: Writes](doc: T, parameters: Parameter*): Future[Identifier] =
         postWithHandler(convertJsonOrError(Identifier))(doc, parameters: _*)
 
-      def postV[T](doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[(Identifier, Version)] =
+      def indexV[T](doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[(Identifier, Version)] =
         postWithHandler(convertJsonOrError(json => (Identifier(json) -> Version(json))))(doc, parameters: _*)
 
       /* Get: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-get.html */
@@ -118,7 +117,7 @@ class Client(elasticSearchUrl: String) {
 
       /* Search APIs: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search.html */
 
-      def search[T: Reads](query: Query, parameters: Parameter*): Future[SearchResult[T]] =
+      def search[T: Reads](query: ElasticSearchQuery, parameters: Parameter*): Future[SearchResult[T]] =
         url("_search", parameters: _*)
           .post(query.toJson) // GET does not accept a http-body in Play2.1.
           .map(fromJsonOrError[SearchResult[T]])

@@ -3,7 +3,7 @@ package play.modules.elasticsearch.query
 import play.api.libs.json.JsValue
 import play.api.libs.json._
 
-case class MatchAllQuery() extends AbstractQuery {
+case class MatchAllQuery() extends Query {
   
   def toQueryDSL =
     Json.obj( "match_all" -> 

@@ -6,6 +6,7 @@ import play.api.libs.json.JsNull
 import play.api.libs.json.Json
 
 trait JsonUtils {
+  
   protected def toJsonIfValid[T: Writes](value: T, isValid: T => Boolean): JsValue =
     if (isValid(value)) Json.toJson(value) else JsNull
 

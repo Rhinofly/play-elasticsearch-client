@@ -1,25 +1,14 @@
 package play.modules.elasticsearch
 
-import org.apache.xalan.xsltc.cmdline.getopt.GetOpt
-import org.specs2.execute.AsResult
-import org.specs2.execute.Result
-import org.specs2.mutable.Around
 import org.specs2.mutable.Specification
-import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
-import scala.concurrent.Await
-import scala.concurrent.Awaitable
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.util.Failure
-import play.api.libs.json._
-import play.api.libs.ws.Response
-import play.api.test.Helpers._
-import play.modules.elasticsearch.query._
 
-object ClientTests extends Specification with NoTimeConversions {
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.test.Helpers.BAD_REQUEST
 
-  val testUrl = "http://localhost:9200"
+object ClientTests extends Specification with NoTimeConversions with ClientUtils {
 
   sequential
 
@@ -131,7 +120,7 @@ object ClientTests extends Specification with NoTimeConversions {
           }
 
           "that does not return a version" in new WithTestIndex {
-            awaitResult(testType.put("test", testDocument)) === ()
+            awaitResult(testType.index("test", testDocument)) === ()
           }
         }
 
@@ -150,7 +139,7 @@ object ClientTests extends Specification with NoTimeConversions {
           }
 
           "that does not return a version" in new WithTestIndex {
-            val id = awaitResult(testType.post(testDocument))
+            val id = awaitResult(testType.index(testDocument))
             id must not beEmpty
           }
         }
@@ -217,9 +206,9 @@ object ClientTests extends Specification with NoTimeConversions {
           }
         }
 
-        "have an merge method" >> {
+        "have an update method" >> {
 
-          "that merges a document in the index and type" in new WithTestIndex {
+          "that updates a document in the index and type" in new WithTestIndex {
             put(id = "test", doc = Json.obj("test" -> "test"))
             val nextVersion = update(id = "test", doc = Json.obj("test" -> "next test"))
             val optionalTestDocument = get[JsObject](id = "test")
@@ -250,59 +239,5 @@ object ClientTests extends Specification with NoTimeConversions {
     }
   }
 
-  val defaultTimeout = 5.seconds
-
-  val testClient = new Client(elasticSearchUrl = testUrl)
-  val testIndexName = "indexname"
-  val testTypeName = "typename"
-
-  def testIndex = testClient(indexName = testIndexName)
-  def testType = testIndex(typeName = testTypeName)
-
-  def testClientHealth = awaitResult(testClient.health)
-  def createTestIndex = awaitResult(testIndex.create)
-  def deleteTestIndex = awaitResult(testIndex.delete)
-  def existsTestIndex = awaitResult(testIndex.exists)
-  def refreshTestIndex = awaitResult(testIndex.refresh)
-
-  def post[T: Writes](doc: T, parameters: Parameter*) = awaitResult(testType.postV(doc = doc, parameters: _*))
-  def get[T: Reads](id: String, parameters: Parameter*) = awaitResult(testType.getV[T](id = id, parameters: _*))
-  def put[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.putV(id = id, doc = doc, parameters: _*))
-  def del[T](id: String, parameters: Parameter*) = awaitResult(testType.delete(id = id, parameters: _*))
-  def update[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.updateV(id = id, doc = doc, parameters: _*))
-  def search[T: Reads](query: Query, parameters: Parameter*) = awaitResult(testType.search[T](query = query, parameters: _*))
-
-  val testDocument = TestDocument("name")
-
-  case class TestDocument(name: String)
-  implicit val testWrites =
-    new Writes[TestDocument] {
-      def writes(t: TestDocument): JsValue = Json.obj("test" -> t.name)
-    }
-  implicit val testReads: Reads[TestDocument] =
-    (__ \ 'test).read[String].map(TestDocument.apply _)
-
-  def awaitResult[T](t: Awaitable[T]) =
-    Await.result(t, defaultTimeout)
-
-  def isException(futureResponse: Future[_], expectedStatus: Int, stringInError: String) = {
-    val result = Await.ready(futureResponse, defaultTimeout).value
-    result must beLike {
-      case Some(Failure(ElasticSearchException(status, error, _))) =>
-        status === expectedStatus
-        error must contain(stringInError)
-    }
-  }
-
-  abstract class WithTestIndex extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      createTestIndex
-      try {
-        AsResult(t)
-      } finally {
-        deleteTestIndex
-      }
-    }
-  }
 
 }
