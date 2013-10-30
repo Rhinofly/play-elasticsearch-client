@@ -1,6 +1,7 @@
 package play.modules.elasticsearch.query
 
 import play.api.libs.json._
+import scala.language.implicitConversions
 
 trait Query {
 

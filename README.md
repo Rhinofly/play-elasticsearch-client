@@ -17,7 +17,7 @@ Add the dependency:
 
 ``` scala
 	val appDependencies = Seq(
-      "nl.rhinofly" %% "play-elasticsearch-client" % "1.0.0"
+      "nl.rhinofly" %% "play-elasticsearch-client" % "0.1"
     )
 ```
 
