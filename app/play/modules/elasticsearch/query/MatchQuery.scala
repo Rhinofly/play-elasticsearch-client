@@ -1,6 +1,7 @@
 package play.modules.elasticsearch.query
 
 import play.api.libs.json._
+import play.modules.elasticsearch.JsonUtils
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-match-query.html
@@ -16,20 +17,18 @@ case class MatchQuery(
   slop: Int = 0,
   lenient: Boolean = false
 ) extends Query with JsonUtils {
-  
+
   def toQueryDSL =
-    Json.obj( "match" -> 
+    Json.obj( "match" ->
       Json.obj(field ->
-        JsObject(
-          Seq(
-            "query" -> JsString(value),
-            "operator" -> JsString(operator.toString()),
-            "type" -> toJsonIfValid(matchType.toString, {x:String => x != MatchType.boolean.toString}),
-            "minimum_should_match" -> toJsonIfValid[String](minimumShouldMatch, _ != ""),
-            "fuzziness" -> toJsonIfValid[Double](fuzziness, _ >= 0.0),
-            "slop" -> toJsonIfValid[Int](slop, _ > 0),
-            "lenient" -> toJsonIfValid[Boolean](lenient, x => x)
-          ).filter(isValidJsonProperty)
+        toJsonObject(
+          "query" -> JsString(value),
+          "operator" -> JsString(operator.toString()),
+          "type" -> toJsonIfValid(matchType.toString, {x:String => x != MatchType.boolean.toString}),
+          "minimum_should_match" -> toJsonIfValid[String](minimumShouldMatch, _ != ""),
+          "fuzziness" -> toJsonIfValid[Double](fuzziness, _ >= 0.0),
+          "slop" -> toJsonIfValid[Int](slop, _ > 0),
+          "lenient" -> toJsonIfValid[Boolean](lenient, x => x)
         )
       )
     )

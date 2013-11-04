@@ -38,14 +38,26 @@ class Client(elasticSearchUrl: String) {
   def apply(indexName: String) = Index(indexName)
   val index = apply _
 
+  /* A client can connect to several ES indexes. */
   case class Index(name: String) {
-    
+
     /* Index APIs: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices.html */
 
     def url(implicit path: String = "") = Client.this.url(name + '/' + path)
 
+    /* Create can have settings or mappings parameters, or both. */
+
     def create(): Future[Unit] =
       url.put(Array.empty[Byte]).map(unitOrError)
+
+    def create(settings: Settings): Future[Unit] =
+      url.post(settings.toJson).map(unitOrError)
+
+    def create(mappings: Seq[Mapping]): Future[Unit] =
+      url.post(Mapping.jsonForTypes(mappings)).map(unitOrError)
+
+    def create(settings: Settings, mappings: Seq[Mapping]): Future[Unit] =
+      url.post(settings.toJsonWithMappings(mappings)).map(unitOrError)
 
     def delete(): Future[Boolean] =
       url.delete.map(found)
@@ -53,18 +65,29 @@ class Client(elasticSearchUrl: String) {
     def exists: Future[Boolean] =
       url.head.map(found)
 
+    /* Retrieve settings for this index. */
+// The structure of what comes back from ES is very different from the settings as they are sent, so we skip this. For example:
+//{"indexname":{"settings":{"index.analysis.analyzer.standard.type":"standard","index.analysis.analyzer.standard.stopwords.0":"de","index.analysis.analyzer.standard.stopwords.1":"het","index.number_of_replicas":"3","index.number_of_shards":"2","index.analysis.analyzer.standard.stopwords.2":"een","index.version.created":"900599"}}}
+//    def settings: Future[Settings] =
+//      url("_settings").get.map(convertJsonOrError(Settings.fromJson))
+
+    /* Retrieve mappings for all types. */
+    def mappings: Future[Seq[Mapping]] =
+      url("_mapping").get.map(convertJsonOrError(Mapping.typesFromJson))
+
     /* Refresh will commit the index and make all documents findable. */
     def refresh(): Future[Unit] =
       url("_refresh").post("").map(unitOrError)
 
     def apply(typeName: String) = Type(typeName)
 
+    /* An index can contain several types. */
     case class Type(name: String) {
 
-      def url(path: String, parameters: Parameter*) =
+      private def url(path: String, parameters: Parameter*) =
         Index.this.url(name + '/' + path).withQueryString(parameters: _*)
 
-      def url(parameters: Parameter*): RequestHolder =
+      private def url(parameters: Parameter*): RequestHolder =
         url("", parameters: _*)
 
       private def putWithHandler[T, R](handler: Response => R)(id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
@@ -73,7 +96,19 @@ class Client(elasticSearchUrl: String) {
       private def postWithHandler[T, R](handler: Response => R)(doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
         url(parameters: _*).post(writer.writes(doc)).map(handler)
 
-      /* Index: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-index_.html */
+      /* Define a mapping for this type: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices-put-mapping.html */
+      def create(mapping: Mapping)(implicit mappingWrites: Writes[Mapping]): Future[Unit] =
+        url("_mapping").put(mappingWrites.writes(mapping)).map(unitOrError)
+
+      /* Retrieve the mapping for this type, or throw an exception if it does not exist: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices-get-mapping.html */
+      def mapping(implicit mappingReads: Reads[Mapping]) : Future[Mapping] =
+        url("_mapping").get().map(fromJsonOrError(mappingReads))
+
+      /* Retrieve the mapping as an option, returning None if there is no mapping for the type. */
+      def mappingOpt(implicit mappingReads: Reads[Mapping]) : Future[Option[Mapping]] =
+        url("_mapping").get().map(response => if(response.status != 404) Some(fromJsonOrError(mappingReads)(response)) else None)
+
+      /* Index a document: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-index_.html */
       def index[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Unit] =
         putWithHandler(unitOrError)(id, doc, parameters: _*)
 

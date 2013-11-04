@@ -6,7 +6,15 @@ import org.specs2.time.NoTimeConversions
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.modules.elasticsearch.query._
+import play.modules.elasticsearch.query.BoolQuery
+import play.modules.elasticsearch.query.MatchAllQuery
+import play.modules.elasticsearch.query.MatchQuery
+import play.modules.elasticsearch.query.MatchType
+import play.modules.elasticsearch.query.MultiMatchQuery
+import play.modules.elasticsearch.query.Operator
+import play.modules.elasticsearch.query.Query.queryToElasticSearchQuery
+import play.modules.elasticsearch.query.TermQuery
+import play.modules.elasticsearch.query.TermsQuery
 
 object QueryTests extends Specification with NoTimeConversions with ClientUtils {
 
