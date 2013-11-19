@@ -14,3 +14,5 @@ dist
 /.worksheet
 
 /test.sc
+.idea/
+.idea_modules/
