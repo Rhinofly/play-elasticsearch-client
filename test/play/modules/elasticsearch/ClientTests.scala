@@ -34,12 +34,12 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
     "have a health method" >> {
       "that returns the health of the server" in {
         val result = testClientHealth
-        (result \ "cluster_name").as[String] === "elasticsearch"
+        (result \ "cluster_name").as[String] !== ""
       }
 
       "that accepts parameters" in {
         val result = awaitResult(testClient.health("level" -> "indices"))
-        (result \ "cluster_name").as[String] === "elasticsearch"
+        (result \ "cluster_name").as[String] !== ""
       }
     }
 
@@ -58,6 +58,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           val futureResponse = testIndex.create
           isException(futureResponse, BAD_REQUEST, testIndexName)
         }
+
       }
 
       "have a delete method" >> {
@@ -164,7 +165,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             val optionalTestDocument = get[TestDocument](id = "non-existing")
             optionalTestDocument === None
           }
-          
+
           "that throws an exception when retrieving from an index that does not exist"  in {
             get[TestDocument](id = "anything") must throwA[ElasticSearchException]
           }
@@ -228,7 +229,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
                 doc === Json.obj("test" -> "test", "content" -> "new content")
             }
           }
-          
+
           "that does not return a version" in new WithTestIndex {
             index(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
             val result = awaitResult(testType.update(id = "test", doc = Json.obj("content" -> "new content")))

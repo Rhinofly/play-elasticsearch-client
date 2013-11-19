@@ -1,6 +1,7 @@
 package play.modules.elasticsearch.query
 
 import play.api.libs.json._
+import play.modules.elasticsearch.JsonUtils
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html
@@ -13,18 +14,16 @@ case class MultiMatchQuery(
   fuzziness: Double = -3.14,
   slop: Int = 0
 ) extends Query with JsonUtils {
-  
+
   def toQueryDSL =
-    Json.obj( "multi_match" -> 
-      JsObject(
-        Seq(
-          "fields" -> Json.toJson(fields),
-          "query" -> JsString(value),
-          "operator" -> JsString(operator.toString()),
-          "type" -> toJsonIfValid(matchType.toString, {x:String => x != MatchType.boolean.toString}),
-          "fuzziness" -> toJsonIfValid(fuzziness, {x:Double => x >= 0.0}),
-          "slop" -> toJsonIfValid(slop, {x:Int => x > 0})
-        ).filter(isValidJsonProperty)
+    Json.obj( "multi_match" ->
+      toJsonObject(
+        "fields" -> Json.toJson(fields),
+        "query" -> JsString(value),
+        "operator" -> JsString(operator.toString()),
+        "type" -> toJsonIfValid(matchType.toString, {x:String => x != MatchType.boolean.toString}),
+        "fuzziness" -> toJsonIfValid(fuzziness, {x:Double => x >= 0.0}),
+        "slop" -> toJsonIfValid(slop, {x:Int => x > 0})
       )
     )
 
