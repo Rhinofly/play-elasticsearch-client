@@ -21,7 +21,7 @@ case class ElasticSearchQuery(query: Query, properties: Seq[(String, JsValue)] =
     val (key, value) = property
     copy(properties = properties :+ (key -> writer.writes(value)))
   }
-  
+
   def toJson: JsObject =
     Json.obj("query" -> query.toQueryDSL) ++ JsObject(properties)
 

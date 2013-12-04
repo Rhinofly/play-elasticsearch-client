@@ -6,6 +6,7 @@ import play.modules.elasticsearch.JsonUtils
 
 /**
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html.
+ * For the minimumShouldMatch parameter, see http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html
  */
 case class BoolQuery(
   shoulds: List[Query] = List(),
@@ -25,10 +26,9 @@ case class BoolQuery(
   def toQueryDSL =
     Json.obj("bool" ->
       JsObject(
-        subQueries("should", shoulds) ++
-          subQueries("must", musts) ++
-          subQueries("must_not", mustNots)),
-      "minimum_should_match" -> toJsonIfValid(minimumShouldMatch, { x: String => x != "" }))
+        subQueries("should", shoulds) ++ subQueries("must", musts) ++ subQueries("must_not", mustNots) :+
+        ("minimum_should_match" -> toJsonIfValid[String](minimumShouldMatch, { _ != "" }))
+      ))
 
   private def subQueries(name: String, queries: List[Query]): Seq[(String, JsValue)] =
     queries match {
