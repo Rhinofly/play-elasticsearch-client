@@ -1,7 +1,7 @@
 package play.modules.elasticsearch.query
 
-import play.api.libs.json._
 import scala.language.implicitConversions
+import play.api.libs.json.JsValue
 
 trait Query {
 
@@ -9,7 +9,7 @@ trait Query {
    * Create a partial query that can be used in a compound query.
    */
   def toQueryDSL: JsValue
-  
+
 }
 
 object Operator extends Enumeration {
