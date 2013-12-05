@@ -167,6 +167,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
 
           "that throws an exception when retrieving from an index that does not exist"  in {
+            if (existsTestIndex) deleteTestIndex else ()
             get[TestDocument](id = "anything") must throwA[ElasticSearchException]
           }
 

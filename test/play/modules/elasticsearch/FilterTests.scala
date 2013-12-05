@@ -207,7 +207,7 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
 //
 //    }
 
-    "have a BoolFIlter sub-class" >> {
+    "have a BoolFilter sub-class" >> {
 
       "that matches documents matching boolean combinations of other filters" in new WithTestIndex {
         index(id = "test1", doc = Json.obj("test" -> "one two three"))

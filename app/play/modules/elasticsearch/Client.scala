@@ -66,10 +66,10 @@ class Client(elasticSearchUrl: String) {
       url.head.map(found)
 
     /* Retrieve settings for this index. */
-// The structure of what comes back from ES is very different from the settings as they are sent, so we skip this. For example:
-//{"indexname":{"settings":{"index.analysis.analyzer.standard.type":"standard","index.analysis.analyzer.standard.stopwords.0":"de","index.analysis.analyzer.standard.stopwords.1":"het","index.number_of_replicas":"3","index.number_of_shards":"2","index.analysis.analyzer.standard.stopwords.2":"een","index.version.created":"900599"}}}
-//    def settings: Future[Settings] =
-//      url("_settings").get.map(convertJsonOrError(Settings.fromJson))
+    // The structure of what comes back from ES is very different from the settings as they are sent, so we skip this. For example:
+    //{"indexname":{"settings":{"index.analysis.analyzer.standard.type":"standard","index.analysis.analyzer.standard.stopwords.0":"de","index.analysis.analyzer.standard.stopwords.1":"het","index.number_of_replicas":"3","index.number_of_shards":"2","index.analysis.analyzer.standard.stopwords.2":"een","index.version.created":"900599"}}}
+    //    def settings: Future[Settings] =
+    //      url("_settings").get.map(convertJsonOrError(Settings.fromJson))
 
     /* Retrieve mappings for all types. */
     def mappings: Future[Seq[Mapping]] =
