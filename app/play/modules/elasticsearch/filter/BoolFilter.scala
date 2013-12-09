@@ -10,9 +10,10 @@ import play.modules.elasticsearch.JsonUtils
  * The Bool filter does not support minimum_should_match, see https://github.com/elasticsearch/elasticsearch/issues/4142
  */
 case class BoolFilter(
-  shoulds: List[Filter] = List(),
-  musts: List[Filter] = List(),
-  mustNots: List[Filter] = List()) extends Filter with JsonUtils {
+  shoulds: Seq[Filter] = Seq.empty,
+  musts: Seq[Filter] = Seq.empty,
+  mustNots: Seq[Filter] = Seq.empty
+) extends Filter with JsonUtils {
 
   def should(filter: Filter) =
     copy(shoulds = shoulds :+ filter)
@@ -29,7 +30,7 @@ case class BoolFilter(
         subFilters("should", shoulds) ++ subFilters("must", musts) ++ subFilters("must_not", mustNots)
       ))
 
-  private def subFilters(name: String, filters: List[Filter]): Seq[(String, JsValue)] =
+  private def subFilters(name: String, filters: Seq[Filter]): Seq[(String, JsValue)] =
     filters match {
       case Nil => Nil
       case List(filter) => Seq(name -> filter.toQueryDSL)

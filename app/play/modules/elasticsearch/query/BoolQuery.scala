@@ -9,10 +9,11 @@ import play.modules.elasticsearch.JsonUtils
  * For the minimumShouldMatch parameter, see http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html
  */
 case class BoolQuery(
-  shoulds: List[Query] = List(),
-  musts: List[Query] = List(),
-  mustNots: List[Query] = List(),
-  minimumShouldMatch: String = "") extends Query with JsonUtils {
+  shoulds: Seq[Query] = Seq.empty,
+  musts: Seq[Query] = Seq.empty,
+  mustNots: Seq[Query] = Seq.empty,
+  minimumShouldMatch: String = ""
+) extends Query with JsonUtils {
 
   def should(query: Query) =
     copy(shoulds = shoulds :+ query)
@@ -30,7 +31,7 @@ case class BoolQuery(
         ("minimum_should_match" -> toJsonIfValid[String](minimumShouldMatch, { _ != "" }))
       ))
 
-  private def subQueries(name: String, queries: List[Query]): Seq[(String, JsValue)] =
+  private def subQueries(name: String, queries: Seq[Query]): Seq[(String, JsValue)] =
     queries match {
       case Nil => Nil
       case List(query) => Seq(name -> query.toQueryDSL)

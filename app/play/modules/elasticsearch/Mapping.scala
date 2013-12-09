@@ -5,13 +5,17 @@ import play.api.data.validation.ValidationError
 
 /**
  * Mappings for ES indexes and types.
- * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping.html,
- * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping-core-types.html.
+ * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping.html
+ *     http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping-core-types.html
  *
  * The Mapping class defines mappings for fields recursively.
  * The field name at the top-level is the type that is mapped in ElasticSearch.
+ *
  * Every item in a mapping can have a default value. Default values are not included when specifying a mapping to ES.
  * In this way, items that are not applicable for a specific mapping-type will be absent from the mapping (if they have the default values).
+ *
+ * The Mapping class only defines the core mapping options.
+ * Additional type-specific options are defined in extensions, see the MappingExtension trait.
  */
 
 case class Mapping(
@@ -24,11 +28,19 @@ case class Mapping(
     analyzer: AnalyzerType.Value = AnalyzerType.default,
     indexAnalyzer: AnalyzerType.Value = AnalyzerType.default,
     searchAnalyzer: AnalyzerType.Value = AnalyzerType.default,
-    properties: Seq[Mapping] = Seq.empty
-  )
+    properties: Seq[Mapping] = Seq.empty,
+    extensions: Seq[MappingExtension] = Seq.empty
+  ) {
+
+  def extendWith(extension: MappingExtension) =
+    copy(extensions = extension +: extensions)
+
+}
+
+/* Types for mapping options. */
 
 object MappingType extends Enumeration {
-  val `object`, string, byte, short, integer, long, float, double, date, boolean, binary = Value
+  val `object`, string, byte, short, integer, long, float, double, date, boolean, binary, geo_point = Value
   val default = `object`
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(MappingType)
   implicit def enumWrites: Writes[Value] = EnumUtils.enumWrites
@@ -70,6 +82,8 @@ object AnalyzerType {
   val default = "default"
 }
 
+/* Companion object for Reads and Writes. */
+
 object Mapping extends JsonUtils {
 
   // Writes mappings.
@@ -79,19 +93,21 @@ object Mapping extends JsonUtils {
       Json.obj( mapping.field -> mappingJson(mapping) )
   }
 
+  /* Convert mapping for a field into JSON. */
   def mappingJson(mapping: Mapping): JsValue =
-    toJsonObject(
-      "type" -> toJsonIfNot(mapping.fieldType, MappingType.default),
-      "index" -> toJsonIfNot(mapping.index, IndexType.default),
-      "store" -> toJsonIfNot(mapping.store, StoreType.default),
-      "boost" -> toJsonIfNot(mapping.boost, BoostType.default),
-      "term_vector" -> toJsonIfNot(mapping.termVector, TermVectorType.default),
-      "analyzer" -> toJsonIfNot(mapping.analyzer, AnalyzerType.default),
-      "index_analyzer" -> toJsonIfNot(mapping.indexAnalyzer, AnalyzerType.default),
-      "search_analyzer" -> toJsonIfNot(mapping.searchAnalyzer, AnalyzerType.default),
-      "properties" -> toJsonObject(mapping.properties.map{jsonTuple}:_*)
-    )
+    ( toJsonObject(
+        "type" -> toJsonIfNot(mapping.fieldType, MappingType.default),
+        "index" -> toJsonIfNot(mapping.index, IndexType.default),
+        "store" -> toJsonIfNot(mapping.store, StoreType.default),
+        "boost" -> toJsonIfNot(mapping.boost, BoostType.default),
+        "term_vector" -> toJsonIfNot(mapping.termVector, TermVectorType.default),
+        "analyzer" -> toJsonIfNot(mapping.analyzer, AnalyzerType.default),
+        "index_analyzer" -> toJsonIfNot(mapping.indexAnalyzer, AnalyzerType.default),
+        "search_analyzer" -> toJsonIfNot(mapping.searchAnalyzer, AnalyzerType.default),
+        "properties" -> toJsonObject(mapping.properties.map{jsonTuple}:_*)
+      ) /: mapping.extensions.map(_.mappingJson) ) {_ ++ _}
 
+  /* Tuple for field and mapping. */
   def jsonTuple(mapping: Mapping) = (mapping.field -> mappingJson(mapping))
 
   /**

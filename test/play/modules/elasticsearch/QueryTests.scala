@@ -6,7 +6,6 @@ import org.specs2.time.NoTimeConversions
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.modules.elasticsearch.query.{BoolQuery, MatchAllQuery, MatchQuery, MatchType, MultiMatchQuery, Operator, TermQuery, TermsQuery}
-//import play.modules.elasticsearch.query.Query.queryToElasticSearchQuery
 
 object QueryTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -192,24 +191,10 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         index(id = "test2", doc = Json.obj("test" -> "one three"))
         index(id = "test3", doc = Json.obj("test" -> "three"))
         refreshTestIndex
-        val result1 = search[JsObject](
-          BoolQuery(minimumShouldMatch = "1")
-            should TermQuery("test", "one")
-            should TermQuery("test", "two")
-            should TermQuery("test", "three")
-        )
-        val result2 = search[JsObject](
-          BoolQuery(minimumShouldMatch = "2")
-            should TermQuery("test", "one")
-            should TermQuery("test", "two")
-            should TermQuery("test", "three")
-        )
-        val result3 = search[JsObject](
-          BoolQuery(minimumShouldMatch = "3")
-            should TermQuery("test", "one")
-            should TermQuery("test", "two")
-            should TermQuery("test", "three")
-        )
+        val shoulds = Seq(TermQuery("test", "one"), TermQuery("test", "two"), TermQuery("test", "three"))
+        val result1 = search[JsObject](BoolQuery(minimumShouldMatch = "1", shoulds = shoulds))
+        val result2 = search[JsObject](BoolQuery(minimumShouldMatch = "2", shoulds = shoulds))
+        val result3 = search[JsObject](BoolQuery(minimumShouldMatch = "3", shoulds = shoulds))
         result1.hitsTotal === 3
         result2.hitsTotal === 2
         result3.hitsTotal === 0

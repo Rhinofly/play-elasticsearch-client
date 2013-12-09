@@ -8,10 +8,10 @@ import play.api.libs.json.Json
 case class MissingFilter(
   field: String,
   existence: Boolean = true,
-  null_value: Boolean = true
+  nullValue: Boolean = true
 ) extends Filter {
 
   def toQueryDSL =
-    Json.obj("missing" -> Json.obj("field" -> field, "existence" -> existence, "null_value" -> null_value))
+    Json.obj("missing" -> Json.obj("field" -> field, "existence" -> existence, "null_value" -> nullValue))
 
 }

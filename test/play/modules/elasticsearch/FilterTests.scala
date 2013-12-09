@@ -23,9 +23,10 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
     br
 
     "be used in a FilteredQuery, combined with a query" in new WithTestIndex {
-      index(id = "test11", doc = Json.obj("content" -> "something", "year" -> 2011), "refresh" -> "true")
-      index(id = "test12", doc = Json.obj("content" -> "something", "year" -> 2012), "refresh" -> "true")
-      index(id = "test13", doc = Json.obj("content" -> "nothing", "year" -> 2013), "refresh" -> "true")
+      index(id = "test11", doc = Json.obj("content" -> "something", "year" -> 2011))
+      index(id = "test12", doc = Json.obj("content" -> "something", "year" -> 2012))
+      index(id = "test13", doc = Json.obj("content" -> "nothing", "year" -> 2013))
+      refreshTestIndex
       val result = search[JsObject](FilteredQuery(query = TermQuery("content", "something"), filter = RangeFilter("year", from = 2012, to = 2014)))
       result.hitsTotal === 1
       hasHitIds(result, Set("test12"))
@@ -36,14 +37,16 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
     "have a TermFilter sub-class" >> {
 
       "that finds a matching document" in new WithTestIndex {
-        index(id = "test", doc = Json.obj("test" -> "test has some content"), "refresh" -> "true")
+        index(id = "test", doc = Json.obj("test" -> "test has some content"))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = TermFilter("test", "content")))
         result.hitsTotal === 1
         hasHitIds(result, Set("test"))
       }
 
       "that does not find non-matching documents" in new WithTestIndex {
-        index(id = "test", doc = Json.obj("test" -> "test has some content"), "refresh" -> "true")
+        index(id = "test", doc = Json.obj("test" -> "test has some content"))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = TermFilter("test", "whatever")))
         result.hitsTotal === 0
         result.hits === List()
@@ -54,52 +57,58 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
     "have a RangeFilter sub-class" >> {
 
       "that finds matching documents with a numeric field" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("year" -> 1963), "refresh" -> "true")
-        index(id = "test2", doc = Json.obj("year" -> 1993), "refresh" -> "true")
-        index(id = "test3", doc = Json.obj("year" -> 2013), "refresh" -> "true")
+        index(id = "test1", doc = Json.obj("year" -> 1963))
+        index(id = "test2", doc = Json.obj("year" -> 1993))
+        index(id = "test3", doc = Json.obj("year" -> 2013))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = RangeFilter(field = "year", from = 1990, to = 2000)))
         result.hitsTotal === 1
         hasHitIds(result, Set("test2"))
       }
 
       "that finds matching documents with a numeric field, excluding lower bound" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("year" -> 1963), "refresh" -> "true")
-        index(id = "test2", doc = Json.obj("year" -> 1993), "refresh" -> "true")
-        index(id = "test3", doc = Json.obj("year" -> 2013), "refresh" -> "true")
-        val result = search[JsObject](FilteredQuery(filter = RangeFilter(field = "year", from = 1993, to = 2000, include_lower = false)))
+        index(id = "test1", doc = Json.obj("year" -> 1963))
+        index(id = "test2", doc = Json.obj("year" -> 1993))
+        index(id = "test3", doc = Json.obj("year" -> 2013))
+        refreshTestIndex
+        val result = search[JsObject](FilteredQuery(filter = RangeFilter(field = "year", from = 1993, to = 2000, includeLower = false)))
         result.hitsTotal === 0
       }
 
       "that finds matching documents with a numeric field, excluding upper bound" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("year" -> 1963), "refresh" -> "true")
-        index(id = "test2", doc = Json.obj("year" -> 1993), "refresh" -> "true")
-        index(id = "test3", doc = Json.obj("year" -> 2013), "refresh" -> "true")
-        val result = search[JsObject](FilteredQuery(filter = RangeFilter(field = "year", from = 1990, to = 1993, include_upper = false)))
+        index(id = "test1", doc = Json.obj("year" -> 1963))
+        index(id = "test2", doc = Json.obj("year" -> 1993))
+        index(id = "test3", doc = Json.obj("year" -> 2013))
+        refreshTestIndex
+        val result = search[JsObject](FilteredQuery(filter = RangeFilter(field = "year", from = 1990, to = 1993, includeUpper = false)))
         result.hitsTotal === 0
       }
 
       "that finds a matching document with a string field" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("name" -> "alice"), "refresh" -> "true")
-        index(id = "test2", doc = Json.obj("name" -> "bob"), "refresh" -> "true")
-        index(id = "test3", doc = Json.obj("name" -> "carl"), "refresh" -> "true")
+        index(id = "test1", doc = Json.obj("name" -> "alice"))
+        index(id = "test2", doc = Json.obj("name" -> "bob"))
+        index(id = "test3", doc = Json.obj("name" -> "carl"))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = RangeFilter(field = "name", from = "b", to = "c")))
         result.hitsTotal === 1
         hasHitIds(result, Set("test2"))
       }
 
       "that finds multiple matching documents with a string field" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("name" -> "alice"), "refresh" -> "true")
-        index(id = "test2", doc = Json.obj("name" -> "bob"), "refresh" -> "true")
-        index(id = "test3", doc = Json.obj("name" -> "carl"), "refresh" -> "true")
+        index(id = "test1", doc = Json.obj("name" -> "alice"))
+        index(id = "test2", doc = Json.obj("name" -> "bob"))
+        index(id = "test3", doc = Json.obj("name" -> "carl"))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = RangeFilter(field = "name", from = "a", to = "c")))
         result.hitsTotal === 2
         hasHitIds(result, Set("test1", "test2"))
       }
 
       "that has an execution option" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("year" -> 1963), "refresh" -> "true")
-        index(id = "test2", doc = Json.obj("year" -> 1993), "refresh" -> "true")
-        index(id = "test3", doc = Json.obj("year" -> 2013), "refresh" -> "true")
+        index(id = "test1", doc = Json.obj("year" -> 1963))
+        index(id = "test2", doc = Json.obj("year" -> 1993))
+        index(id = "test3", doc = Json.obj("year" -> 2013))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = RangeFilter(field = "year", from = 1990, to = 2000, execution = RangeExecution.fielddata)))
         result.hitsTotal === 1
         hasHitIds(result, Set("test2"))
@@ -110,8 +119,9 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
     "have a ExistsFilter sub-class" >> {
 
       "that finds matching documents" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("title" -> "Programming In Scala"), "refresh" -> "true")
-        index(id = "test2", doc = Json.obj("title" -> "Play for Scala", "year" -> 2013), "refresh" -> "true")
+        index(id = "test1", doc = Json.obj("title" -> "Programming In Scala"))
+        index(id = "test2", doc = Json.obj("title" -> "Play for Scala", "year" -> 2013))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = ExistsFilter(field = "year")))
         result.hitsTotal === 1
         hasHitIds(result, Set("test2"))
@@ -122,9 +132,10 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
     "have a MissingFilter sub-class" >> {
 
       "that finds matching documents" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("year" -> JsNull), "refresh" -> "true")
-        index(id = "test2", doc = Json.obj("year" -> 2013), "refresh" -> "true")
-        val result = search[JsObject](FilteredQuery(filter = MissingFilter(field = "year", null_value = true)))
+        index(id = "test1", doc = Json.obj("year" -> JsNull))
+        index(id = "test2", doc = Json.obj("year" -> 2013))
+        refreshTestIndex
+        val result = search[JsObject](FilteredQuery(filter = MissingFilter(field = "year", nullValue = true)))
         result.hitsTotal === 1
         hasHitIds(result, Set("test1"))
       }
@@ -134,9 +145,10 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
     "have a AndFilter sub-class" >> {
 
       "that finds matching documents" in new WithTestIndex {
-        index(id = "2012", doc = Json.obj("year" -> 2012), "refresh" -> "true")
-        index(id = "2013", doc = Json.obj("year" -> 2013), "refresh" -> "true")
-        index(id = "2014", doc = Json.obj("year" -> 2014), "refresh" -> "true")
+        index(id = "2012", doc = Json.obj("year" -> 2012))
+        index(id = "2013", doc = Json.obj("year" -> 2013))
+        index(id = "2014", doc = Json.obj("year" -> 2014))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = AndFilter(Seq(
             RangeFilter(field = "year", from = 0, to = 2013),
             RangeFilter(field = "year", from = 2013, to = 9999)
@@ -150,9 +162,10 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
     "have a OrFilter sub-class" >> {
 
       "that finds matching documents" in new WithTestIndex {
-        index(id = "2012", doc = Json.obj("year" -> 2012), "refresh" -> "true")
-        index(id = "2013", doc = Json.obj("year" -> 2013), "refresh" -> "true")
-        index(id = "2014", doc = Json.obj("year" -> 2014), "refresh" -> "true")
+        index(id = "2012", doc = Json.obj("year" -> 2012))
+        index(id = "2013", doc = Json.obj("year" -> 2013))
+        index(id = "2014", doc = Json.obj("year" -> 2014))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = OrFilter(Seq(
             RangeFilter(field = "year", from = 0, to = 2013),
             RangeFilter(field = "year", from = 2013, to = 9999)
@@ -162,12 +175,13 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
       }
 
       "that finds matching documents within ranges" in new WithTestIndex {
-        index(id = "2012", doc = Json.obj("year" -> 2012), "refresh" -> "true")
-        index(id = "2013", doc = Json.obj("year" -> 2013), "refresh" -> "true")
-        index(id = "2014", doc = Json.obj("year" -> 2014), "refresh" -> "true")
+        index(id = "2012", doc = Json.obj("year" -> 2012))
+        index(id = "2013", doc = Json.obj("year" -> 2013))
+        index(id = "2014", doc = Json.obj("year" -> 2014))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = OrFilter(Seq(
-            RangeFilter(field = "year", from = 0, to = 2013, include_upper = false),
-            RangeFilter(field = "year", from = 2013, to = 9999, include_lower = false)
+            RangeFilter(field = "year", from = 0, to = 2013, includeUpper = false),
+            RangeFilter(field = "year", from = 2013, to = 9999, includeLower = false)
           ))))
         result.hitsTotal === 2
         hasHitIds(result, Set("2012", "2014"))
@@ -178,9 +192,10 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
     "have a NotFilter sub-class" >> {
 
       "that finds documents not matching a filter" in new WithTestIndex {
-        index(id = "2012", doc = Json.obj("year" -> 2012), "refresh" -> "true")
-        index(id = "2013", doc = Json.obj("year" -> 2013), "refresh" -> "true")
-        index(id = "2014", doc = Json.obj("year" -> 2014), "refresh" -> "true")
+        index(id = "2012", doc = Json.obj("year" -> 2012))
+        index(id = "2013", doc = Json.obj("year" -> 2013))
+        index(id = "2014", doc = Json.obj("year" -> 2014))
+        refreshTestIndex
         val result = search[JsObject](FilteredQuery(filter = NotFilter(
             RangeFilter(field = "year", from = 2013, to = 2013)
           )))
@@ -189,23 +204,6 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
       }
 
     }
-
-//    "have a MatchAllQuery sub-class" >> {
-//
-//      "that finds no documents if none exist" in new WithTestIndex {
-//        val result = search[JsObject](MatchAllQuery())
-//        result.hitsTotal === 0
-//      }
-//
-//      "that finds all documents" in new WithTestIndex {
-//        index(id = "test1", doc = Json.obj("test" -> "one two three"))
-//        index(id = "test2", doc = Json.obj("test" -> "one two"))
-//        refreshTestIndex
-//        val result = search[JsObject](MatchAllQuery())
-//        result.hitsTotal === 2
-//      }
-//
-//    }
 
     "have a BoolFilter sub-class" >> {
 

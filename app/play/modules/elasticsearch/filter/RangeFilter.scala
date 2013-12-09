@@ -13,8 +13,8 @@ case class RangeFilter[BoundType : Writes](
   field: String,
   from: BoundType,
   to: BoundType,
-  include_lower: Boolean = true,
-  include_upper: Boolean = true,
+  includeLower: Boolean = true,
+  includeUpper: Boolean = true,
   execution: RangeExecution.Value = RangeExecution.default
 ) extends Filter with JsonUtils {
 
@@ -23,8 +23,8 @@ case class RangeFilter[BoundType : Writes](
     Json.obj(filterType ->
       Json.obj(field ->
         Json.obj(
-          (if (include_lower) "gte" else "gt") -> Json.toJson(from),
-          (if (include_upper) "lte" else "lt") -> Json.toJson(to)
+          (if (includeLower) "gte" else "gt") -> Json.toJson(from),
+          (if (includeUpper) "lte" else "lt") -> Json.toJson(to)
         )
       )
     )
