@@ -95,7 +95,7 @@ object GeoTests extends Specification with NoTimeConversions with ClientUtils {
     rhinofly,
     Place("Amsterdam", GeoLatLon(52.37022, 4.89517)),
     Place("New York", GeoLatLon(lat = 40.664167, lon= -73.938611)),
-    Place("Helsingfors", GeoLatLon(60.17332, 24.94102)),
+    Place("Helsingfors", GeoLatLon("60.17332, 24.94102")),
     Place("Lisboa", GeoHash("eycs0p8ukc7v")),
     Place("Sydney", GeoLatLon(-33.859972, 151.211111))
   )
