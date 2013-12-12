@@ -23,8 +23,8 @@ case class RangeFilter[BoundType : Writes](
     Json.obj(filterType ->
       Json.obj(field ->
         Json.obj(
-          (if (includeLower) "gte" else "gt") -> Json.toJson(from),
-          (if (includeUpper) "lte" else "lt") -> Json.toJson(to)
+          (if (includeLower) "gte" else "gt") -> from,
+          (if (includeUpper) "lte" else "lt") -> to
         )
       )
     )

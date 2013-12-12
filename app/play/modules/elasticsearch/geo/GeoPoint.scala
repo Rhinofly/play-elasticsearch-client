@@ -2,6 +2,7 @@ package play.modules.elasticsearch.geo
 
 import play.api.libs.json.{Json, JsValue, JsObject, JsArray, JsNumber, JsString, Writes, Reads, JsSuccess}
 import scala.language.implicitConversions
+import scala.language.postfixOps
 import play.api.libs.json.JsError
 
 /**
@@ -14,6 +15,8 @@ trait GeoPoint {
 
 object GeoPoint {
 
+  val latLonPattern = """(\d+(?:\.\d+)?),(\d+(?:\.\d+)?)"""r
+
   implicit val writes = new Writes[GeoPoint] {
     def writes(point: GeoPoint): JsValue = point.toJson
   }
@@ -24,10 +27,9 @@ object GeoPoint {
         JsSuccess(GeoLatLon(lat.toDouble, lon.toDouble))
       case JsArray(Seq(JsNumber(lon), JsNumber(lat))) =>
         JsSuccess(GeoLatLon(lat.toDouble, lon.toDouble))
-      case JsString(value) if value.matches("\\d+(\\.\\d+)?,\\d+(\\.\\d+)?") =>
-        JsSuccess(GeoLatLon(value))
+      case JsString(latLonPattern(value)) => JsSuccess(GeoLatLon(value))
       case JsString(value) => JsSuccess(GeoHash(value))
-      case _ => JsError("Bad geo_point value: "+json.toString)
+      case badGeoPoint => JsError("Bad geo_point value: " + badGeoPoint.toString)
     }
   }
 
@@ -43,7 +45,7 @@ case class GeoLatLon(lat: Double, lon: Double) extends GeoPoint {
 }
 
 object GeoLatLon {
-  def apply(latLon: String) = {
+  def apply(latLon: String): GeoLatLon = {
     val Array(lat, lon) = latLon.split("\\s*,\\s*").map{_.toDouble}
     new GeoLatLon(lat = lat, lon = lon)
   }
