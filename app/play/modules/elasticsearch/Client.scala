@@ -16,6 +16,10 @@ import play.api.libs.json.Json
 import play.modules.elasticsearch.query.{Query, ElasticSearchQuery}
 import play.api.libs.json.JsString
 import scala.language.existentials
+import scala.util.Try
+import scala.util.Success
+import scala.util.Failure
+import play.api.libs.json.JsNull
 
 class Client(elasticSearchUrl: String) {
 
@@ -85,10 +89,16 @@ class Client(elasticSearchUrl: String) {
         url("", parameters: _*)
 
       private def putWithHandler[T, R](handler: Response => R)(id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
-        url(id, parameters: _*).put(writer.writes(doc)).map(handler)
+        Try(writer.writes(doc)) match {
+          case Success(body) => url(id, parameters: _*).put(body).map(handler)
+          case Failure(error) => throw ElasticSearchException(500, "Cannot make JSON: "+error, JsNull)
+        }
 
       private def postWithHandler[T, R](handler: Response => R)(doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
-        url(parameters: _*).post(writer.writes(doc)).map(handler)
+        Try(writer.writes(doc)) match {
+          case Success(body) => url(parameters: _*).post(body).map(handler)
+          case Failure(error) => throw ElasticSearchException(500, "Cannot make JSON: "+error, JsNull)
+        }
 
       /* Define a mapping for this type: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices-put-mapping.html */
       def create(mapping: Mapping)(implicit mappingWrites: Writes[Mapping]): Future[Unit] =
