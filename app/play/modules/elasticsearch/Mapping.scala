@@ -94,8 +94,8 @@ object Mapping extends JsonUtils {
   }
 
   /* Convert mapping for a field into JSON. */
-  def mappingJson(mapping: Mapping): JsValue =
-    ( toJsonObject(
+  def mappingJson(mapping: Mapping): JsValue = {
+    val baseMapping = toJsonObject(
         "type" -> toJsonIfNot(mapping.fieldType, MappingType.default),
         "index" -> toJsonIfNot(mapping.index, IndexType.default),
         "store" -> toJsonIfNot(mapping.store, StoreType.default),
@@ -105,7 +105,12 @@ object Mapping extends JsonUtils {
         "index_analyzer" -> toJsonIfNot(mapping.indexAnalyzer, AnalyzerType.default),
         "search_analyzer" -> toJsonIfNot(mapping.searchAnalyzer, AnalyzerType.default),
         "properties" -> toJsonObject(mapping.properties.map{jsonTuple}:_*)
-      ) /: mapping.extensions.map(_.mappingJson) ) {_ ++ _}
+      )
+    /* Extensions have their own mappingJson, so the following is not a recursion. */
+    val extensions = mapping.extensions.map(_.mappingJson)
+    /* Concatenate the base mapping and all extensions. */
+    (baseMapping /: extensions) (_ ++_)
+  }
 
   /* Tuple for field and mapping. */
   def jsonTuple(mapping: Mapping) = (mapping.field -> mappingJson(mapping))
