@@ -16,6 +16,10 @@ import play.api.libs.json.Json
 import play.modules.elasticsearch.query.{Query, ElasticSearchQuery}
 import play.api.libs.json.JsString
 import scala.language.existentials
+import scala.util.Try
+import scala.util.Success
+import scala.util.Failure
+import play.api.libs.json.JsNull
 
 class Client(elasticSearchUrl: String) {
 
@@ -65,12 +69,6 @@ class Client(elasticSearchUrl: String) {
     def exists: Future[Boolean] =
       url.head.map(found)
 
-    /* Retrieve settings for this index. */
-// The structure of what comes back from ES is very different from the settings as they are sent, so we skip this. For example:
-//{"indexname":{"settings":{"index.analysis.analyzer.standard.type":"standard","index.analysis.analyzer.standard.stopwords.0":"de","index.analysis.analyzer.standard.stopwords.1":"het","index.number_of_replicas":"3","index.number_of_shards":"2","index.analysis.analyzer.standard.stopwords.2":"een","index.version.created":"900599"}}}
-//    def settings: Future[Settings] =
-//      url("_settings").get.map(convertJsonOrError(Settings.fromJson))
-
     /* Retrieve mappings for all types. */
     def mappings: Future[Seq[Mapping]] =
       url("_mapping").get.map(convertJsonOrError(Mapping.typesFromJson))
@@ -91,10 +89,16 @@ class Client(elasticSearchUrl: String) {
         url("", parameters: _*)
 
       private def putWithHandler[T, R](handler: Response => R)(id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
-        url(id, parameters: _*).put(writer.writes(doc)).map(handler)
+        Try(writer.writes(doc)) match {
+          case Success(body) => url(id, parameters: _*).put(body).map(handler)
+          case Failure(error) => Future.failed(ElasticSearchException(500, "Cannot make JSON: "+error, JsNull))
+        }
 
       private def postWithHandler[T, R](handler: Response => R)(doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
-        url(parameters: _*).post(writer.writes(doc)).map(handler)
+        Try(writer.writes(doc)) match {
+          case Success(body) => url(parameters: _*).post(body).map(handler)
+          case Failure(error) => Future.failed(ElasticSearchException(500, "Cannot make JSON: "+error, JsNull))
+        }
 
       /* Define a mapping for this type: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices-put-mapping.html */
       def create(mapping: Mapping)(implicit mappingWrites: Writes[Mapping]): Future[Unit] =

@@ -11,6 +11,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.modules.elasticsearch.query.MultiMatchQuery
 import play.modules.elasticsearch.query.TermQuery
+import play.modules.elasticsearch.geo.GeoPointMapping
 
 object MappingTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -89,6 +90,22 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
       }
 
     }
+
+    "MappingExtension should" >> {
+
+      "have a GeoPointMapping subclass" in {
+        awaitResult(testIndex.create(Seq(
+          Mapping("place", properties = Seq(
+            Mapping("name", fieldType = MappingType.string),
+            Mapping("position", fieldType = MappingType.geo_point) extendWith GeoPointMapping(indexLatLon = true)
+          ))
+        )))
+        val response = awaitResult(testIndex.url("_mapping").get)
+        response.body.contains(""""position":{"type":"geo_point","lat_lon":true}""") === true
+      }
+
+    }
+
 
   val testMapping =
     Mapping(testTypeName, properties = Seq(

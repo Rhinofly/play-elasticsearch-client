@@ -5,7 +5,7 @@ import play.modules.elasticsearch.JsonUtils
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-match-query.html
- *   http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html
+ * For the minimumShouldMatch parameter, see http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-minimum-should-match.html
  */
 case class MatchQuery(
   field: String,

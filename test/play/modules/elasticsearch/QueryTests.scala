@@ -3,18 +3,9 @@ package play.modules.elasticsearch
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
 
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.modules.elasticsearch.query.BoolQuery
-import play.modules.elasticsearch.query.MatchAllQuery
-import play.modules.elasticsearch.query.MatchQuery
-import play.modules.elasticsearch.query.MatchType
-import play.modules.elasticsearch.query.MultiMatchQuery
-import play.modules.elasticsearch.query.Operator
-import play.modules.elasticsearch.query.Query.queryToElasticSearchQuery
-import play.modules.elasticsearch.query.TermQuery
-import play.modules.elasticsearch.query.TermsQuery
+import play.modules.elasticsearch.query.{BoolQuery, MatchAllQuery, MatchQuery, MatchType, MultiMatchQuery, Operator, TermQuery, TermsQuery}
 
 object QueryTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -114,7 +105,7 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
           (result2.hitsTotal === 0) and
           (result3.hitsTotal === 1)
       }
-      
+
       "that supports minimum_should_match" in new WithTestIndex {
         index(id = "test1", doc = Json.obj("test" -> "one two three"))
         index(id = "test2", doc = Json.obj("test" -> "one two"))
@@ -146,7 +137,7 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
     }
 
     "have a MatchAllQuery sub-class" >> {
-      
+
       "that finds no documents if none exist" in new WithTestIndex {
         val result = search[JsObject](MatchAllQuery())
         result.hitsTotal === 0
@@ -161,9 +152,9 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
       }
 
     }
-    
+
     "have a BoolQuery sub-class" >> {
-      
+
       "that matches documents matching boolean combinations of other queries" in new WithTestIndex {
         index(id = "test1", doc = Json.obj("test" -> "one two three"))
         index(id = "test2", doc = Json.obj("test" -> "one two"))
@@ -176,7 +167,7 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         )
         result.hitsTotal === 1
       }
-      
+
       "that uses 'should' to order the documents" in new WithTestIndex {
         index(id = "test1", doc = Json.obj("test" -> "one two"))
         index(id = "test2", doc = Json.obj("test" -> "one three"))
@@ -194,7 +185,21 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         result1.hits.map(_.id) === List("test1", "test2")
         result2.hits.map(_.id) === List("test2", "test1")
       }
-      
+
+      "that supports the minimumShouldMatch parameter" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two"))
+        index(id = "test2", doc = Json.obj("test" -> "one three"))
+        index(id = "test3", doc = Json.obj("test" -> "three"))
+        refreshTestIndex
+        val shoulds = Seq(TermQuery("test", "one"), TermQuery("test", "two"), TermQuery("test", "three"))
+        val result1 = search[JsObject](BoolQuery(minimumShouldMatch = "1", shoulds = shoulds))
+        val result2 = search[JsObject](BoolQuery(minimumShouldMatch = "2", shoulds = shoulds))
+        val result3 = search[JsObject](BoolQuery(minimumShouldMatch = "3", shoulds = shoulds))
+        result1.hitsTotal === 3
+        result2.hitsTotal === 2
+        result3.hitsTotal === 0
+      }
+
     }
 
   }

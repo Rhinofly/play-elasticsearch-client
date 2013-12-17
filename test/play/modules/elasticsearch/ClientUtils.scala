@@ -70,13 +70,11 @@ trait ClientUtils { self: Specification with NoTimeConversions =>
 
   abstract class WithTestIndex extends Scope with Around {
     def around[T: AsResult](t: => T): Result = {
+      if (existsTestIndex) deleteTestIndex else ()
       createTestIndex
-      try {
-        AsResult(t)
-      } finally {
-        deleteTestIndex
-      }
+      AsResult(t)
+      /* Leave the testIndex after the last test, for inspection via ES-head. */
     }
   }
-  
+
 }

@@ -27,8 +27,7 @@ trait JsonUtils {
     properties.filter(isValidJsonProperty)
 
   protected def toJsonObject(properties: (String, JsValue)*) =
-    if (properties.length > 0) JsObject(filterValid(properties:_*))
-    else JsNull
+    JsObject(filterValid(properties:_*))
 
   val intStringFormat = new Format[Int] {
     def reads(jsValue: JsValue) = jsValue match {

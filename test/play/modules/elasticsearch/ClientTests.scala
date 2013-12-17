@@ -2,11 +2,11 @@ package play.modules.elasticsearch
 
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
-
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.test.Helpers.BAD_REQUEST
+import play.api.libs.json.Writes
 
 object ClientTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -50,6 +50,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
       "have a create method" >> {
 
         "that creates an index" in {
+          deleteTestIndex
           val result = createTestIndex
           result === ()
         }
@@ -107,7 +108,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             version === 1
           }
 
-          "to add a class to an index and type" in new WithTestIndex {
+          "to add a document to an index and type" in new WithTestIndex {
             val version = index("test", testDocument)
             version === 1
           }
@@ -120,7 +121,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             version === 2
           }
 
-          "that does not return a version" in new WithTestIndex {
+          "that returns Unit" in new WithTestIndex {
             awaitResult(testType.index("test", testDocument)) === ()
           }
         }
@@ -139,10 +140,19 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             (version === 2)
           }
 
-          "that does not return a version" in new WithTestIndex {
+          "that returns an id" in new WithTestIndex {
             val id = awaitResult(testType.index(testDocument))
             id must not beEmpty
           }
+
+          "that throws an exception if a document cannot be jsonified" in {
+            case class BadDocument(name: String)
+            implicit val badWrites = new Writes[BadDocument] {
+              def writes(t: BadDocument) = throw new Exception("bad document")
+            }
+            awaitResult(testType.index(BadDocument("BAD!"))) must throwA[ElasticSearchException]
+          }
+
         }
 
         "have a get method" >> {
@@ -167,6 +177,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
 
           "that throws an exception when retrieving from an index that does not exist"  in {
+            if (existsTestIndex) deleteTestIndex else ()
             get[TestDocument](id = "anything") must throwA[ElasticSearchException]
           }
 

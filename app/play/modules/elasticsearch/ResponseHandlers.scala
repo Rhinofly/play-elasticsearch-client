@@ -35,7 +35,6 @@ object ResponseHandlers {
           status <- (json \ "status").asOpt[Int]
           error <- (json \ "error").asOpt[String]
         } yield ElasticSearchException(status, error, json)
-
       throw possibleException.getOrElse(unknownStatusCode(status, response))
   }
 
@@ -44,7 +43,7 @@ object ResponseHandlers {
 
   def unknownStatusCode(status: Int, response: Response) =
     new RuntimeException(s"Unknown status code $status with body: ${response.body}")
-  
+
   object Status {
     def unapply(response: Response): Option[Int] =
       Some(response.status)
