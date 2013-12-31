@@ -11,6 +11,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import play.modules.elasticsearch.query.MultiMatchQuery
 import play.modules.elasticsearch.query.TermQuery
+import play.modules.elasticsearch.analysis.{Analysis, StandardAnalyzer}
 
 object SettingsTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -49,7 +50,7 @@ object SettingsTests extends Specification with NoTimeConversions with ClientUti
       nrOfReplicas = 3,
       analysis = Some(Analysis(
         analyzers = Seq(
-          StandardAnalyzer(name="standard", stopwords = Seq("de", "het", "een"))
+          StandardAnalyzer(name="standard", stopwords = Some(Seq("de", "het", "een")))
         ),
         tokenizers = Seq.empty,
         filters = Seq.empty

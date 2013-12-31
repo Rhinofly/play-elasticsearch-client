@@ -5,6 +5,7 @@ import play.api.libs.json.util._
 import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
+import play.modules.elasticsearch.analysis._
 
 /**
  * Settings for ES indices.
@@ -28,39 +29,6 @@ case class Settings(
     )
 
 }
-
-case class Analysis(
-    analyzers: Seq[Analyzer] = Seq.empty,
-    tokenizers: Seq[Tokenizer] = Seq.empty,
-    filters: Seq[Filter] = Seq.empty
-  )
-
-trait Analyzer {
-  def name: String
-}
-
-case class StandardAnalyzer(
-    name: String,
-    stopwords: Seq[String] = Seq.empty,
-    maxTokenLength: Int = 255
-  ) extends Analyzer
-
-case class CustomAnalyzer(
-    name: String,
-    tokenizer: String,
-    filter: Seq[String]
-  ) extends Analyzer
-
-case class Tokenizer(
-    name: String,
-    `type`: String
-  )
-
-case class Filter(
-    name: String,
-    `type`: String
-  )
-
 
 object Settings extends JsonUtils {
 
@@ -87,82 +55,5 @@ object Settings extends JsonUtils {
     (__ \ "index.number_of_replicas").format(intStringFormat) and
     (__ \ "analysis").formatNullable[Analysis]
   )(Settings.apply, unlift(Settings.unapply))
-
-  implicit lazy val analysisFormat: Format[Analysis] = (
-    (__ \ "analyzer").format[Seq[Analyzer]] and
-    (__ \ "tokenizer").format[Seq[Tokenizer]] and
-    (__ \ "filter").format[Seq[Filter]]
-  )(Analysis.apply, unlift(Analysis.unapply))
-
-  implicit lazy val analyzerListReads: Reads[Seq[Analyzer]] = Reads(json =>
-    JsSuccess(json.as[JsObject].fieldSet.map{case(name, js) =>
-      (js \ "type") match {
-          case JsString("standard") =>
-            StandardAnalyzer(
-              name = name,
-              stopwords = (js \ "stopwords").as[Seq[String]],
-              maxTokenLength = (js \ "max_token_length").as[Int]
-            )
-          case JsUndefined(error) =>
-            CustomAnalyzer(
-              name = name,
-              tokenizer = (js \ "tokenizer").as[String],
-              filter = (js \ "filter").as[Seq[String]]
-            )
-          case other => throw new ElasticSearchException(-1, "Unknown analyzer type.", other)
-        }
-      }.toSeq)
-  )
-
-  implicit lazy val analyzerListWrites: Writes[Seq[Analyzer]] = Writes({analyzers: Seq[Analyzer] =>
-    JsObject(
-      analyzers.map{nlzr => nlzr match {
-        case StandardAnalyzer(name, stopwords, maxTokenLength) =>
-          name -> toJsonObject(
-              "type" -> JsString("standard"),
-              "stopwords" -> JsArray(stopwords.map{JsString(_)})
-            )
-        case CustomAnalyzer(name, tokenizer, filter) =>
-          name -> Json.obj(
-          "tokenizer" -> tokenizer,
-          "filter" -> JsArray(filter.map{JsString(_)})
-        )
-      }}
-    )
-  })
-
-  implicit lazy val tokenizerListReads: Reads[Seq[Tokenizer]] = Reads(json =>
-    JsSuccess(json.as[JsObject].fieldSet.map{case(name, js) =>
-      Tokenizer(
-        name = name,
-        `type` = (js \ "type").as[String]
-      )
-    }.toSeq)
-  )
-
-  implicit lazy val tokenizerListWrites: Writes[Seq[Tokenizer]] = Writes({tokenizers: Seq[Tokenizer] =>
-    JsObject(
-      tokenizers.map{tknzr => (tknzr.name, Json.obj(
-        "type" -> tknzr.`type`
-      ))}
-    )
-  })
-
-  implicit lazy val filterListReads: Reads[Seq[Filter]] = Reads(json =>
-    JsSuccess(json.as[JsObject].fieldSet.map{case(name, js) =>
-      Filter(
-        name = name,
-        `type` = (js \ "type").as[String]
-      )
-    }.toSeq)
-  )
-
-  implicit lazy val filterListWrites: Writes[Seq[Filter]] = Writes({filters: Seq[Filter] =>
-    JsObject(
-      filters.map{fltr => (fltr.name, Json.obj(
-        "type" -> fltr.`type`
-      ))}
-    )
-  })
 
 }
