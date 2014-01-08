@@ -8,8 +8,8 @@ import play.api.data.validation.ValidationError
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping.html
  *     http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping-core-types.html
  *
- * The Mapping class defines mappings for fields recursively.
- * The field name at the top-level is the type that is mapped in ElasticSearch.
+ * The Mapping class defines mappings for field types.
+ * The name of the field at the top-level is the type that is mapped in ElasticSearch.
  *
  * Every item in a mapping can have a default value. Default values are not included when specifying a mapping to ES.
  * In this way, items that are not applicable for a specific mapping-type will be absent from the mapping (if they have the default values).

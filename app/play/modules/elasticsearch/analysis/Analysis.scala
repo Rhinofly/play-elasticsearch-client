@@ -14,8 +14,8 @@ import play.api.libs.json.JsArray
  * to both break indexed (analyzed) fields when a document is indexed and process query strings.
  * Analyzers are composed of a single Tokenizer and zero or more TokenFilters.
  * The tokenizer may be preceded by one or more CharFilters.
- * The Analysis module allows one to register TokenFilters, Tokenizers and Analyzers under logical names
- * that can then be referenced either in mapping definitions or in certain APIs.
+ * The Analysis module allows one to register CharFilters, TokenFilters, Tokenizers and Analyzers
+ * under logical names that can then be referenced either in mapping definitions or in certain APIs.
  *
  * Currently we define components (analyzers, tokenizers, tokenfilters, charfilters) that are listed in the ElasticSearch reference (0.90).
  * The code specifying which analysis components are available can be found at https://github.com/elasticsearch/elasticsearch/blob/.../src/main/java/org/elasticsearch/index/analysis/AnalysisModule.java
