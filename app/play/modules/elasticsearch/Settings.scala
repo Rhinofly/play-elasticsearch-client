@@ -6,6 +6,7 @@ import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
 import play.modules.elasticsearch.analysis._
+import play.modules.elasticsearch.mapping.Mapping
 
 /**
  * Settings for ES indices.
@@ -18,15 +19,10 @@ case class Settings(
   ) {
 
   def toJson =
-    Json.obj(
-      "settings" -> Settings.settingsFormat.writes(this)
-    )
+    Json.obj("settings" -> Settings.settingsFormat.writes(this))
 
   def toJsonWithMappings(mappings: Seq[Mapping]) =
-    Json.obj(
-      "settings" -> Settings.settingsFormat.writes(this),
-      "mappings" -> JsObject(mappings.map{Mapping.jsonTuple})
-    )
+    toJson ++ Mapping.jsonForMappings(mappings)
 
 }
 

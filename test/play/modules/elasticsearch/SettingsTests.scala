@@ -9,6 +9,7 @@ import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
+import play.modules.elasticsearch.mapping._
 import play.modules.elasticsearch.query.MultiMatchQuery
 import play.modules.elasticsearch.query.TermQuery
 import play.modules.elasticsearch.analysis.{Analysis, StandardAnalyzer}
@@ -34,13 +35,13 @@ object SettingsTests extends Specification with NoTimeConversions with ClientUti
     }
 
   val testMapping =
-    Mapping(testTypeName, properties = Seq(
-      Mapping("stringField", fieldType = MappingType.string, store = StoreType.yes, index = IndexType.not_analyzed),
-      Mapping("textField", fieldType = MappingType.string, store = StoreType.yes, index = IndexType.analyzed, analyzer = "simple", boost = 3.0),
-      Mapping("integerField", fieldType = MappingType.integer),
-      Mapping("objectField", properties =  Seq(
-        Mapping("dateField", fieldType = MappingType.date),
-        Mapping("booleanField", fieldType = MappingType.boolean, index=IndexType.no)
+    ObjectMapping(testTypeName, properties = Set(
+      StringMapping("stringField", store = StoreType.yes, index = IndexType.not_analyzed),
+      StringMapping("textField", store = StoreType.yes, index = IndexType.analyzed, analyzer = "simple", boost = 3.0),
+      NumberMapping("integerField", numberType = NumberType.integer),
+      ObjectMapping("objectField", properties =  Set(
+        DateMapping("dateField"),
+        BooleanMapping("booleanField", index=IndexType.no)
       ))
     ))
 

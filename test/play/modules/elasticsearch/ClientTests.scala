@@ -2,11 +2,10 @@ package play.modules.elasticsearch
 
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.api.test.Helpers.BAD_REQUEST
 import play.api.libs.json.Writes
+import play.api.test.Helpers.BAD_REQUEST
 
 object ClientTests extends Specification with NoTimeConversions with ClientUtils {
 

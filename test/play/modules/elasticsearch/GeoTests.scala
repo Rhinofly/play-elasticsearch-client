@@ -1,17 +1,16 @@
 package play.modules.elasticsearch
 
-import org.specs2.execute.AsResult
-import org.specs2.execute.Result
-import org.specs2.runner.ConsoleLogger
-import org.specs2.mutable.Around
-import org.specs2.mutable.Specification
+import org.specs2.execute.{AsResult, Result}
+import org.specs2.mutable.{Around, Specification}
 import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
-import play.api.libs.json.{Json, JsObject, Format, JsPath}
-import play.api.libs.functional.syntax._
-import play.modules.elasticsearch.query.{MatchAllQuery, FilteredQuery}
-import play.modules.elasticsearch.geo.{GeoPoint, GeoLatLon, GeoHash, GeoPointMapping, GeoBoundingBoxFilter, GeoDistanceFilter}
-import play.modules.elasticsearch.geo.DistanceUnit._
+import play.api.libs.functional.syntax.{functionalCanBuildApplicative, toFunctionalBuilderOps, unlift}
+import play.api.libs.json.{Format, JsPath}
+import play.modules.elasticsearch.geo.{GeoBoundingBoxFilter, GeoDistanceFilter, GeoHash, GeoLatLon, GeoPoint, GeoPointMapping}
+import play.modules.elasticsearch.geo.DistanceUnit.{centimeters, kilometers}
+import play.modules.elasticsearch.mapping.{ObjectMapping, StringMapping}
+import play.modules.elasticsearch.query.{FilteredQuery, MatchAllQuery}
+import play.modules.elasticsearch.query.Query.queryToElasticSearchQuery
 
 object GeoTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -102,9 +101,9 @@ object GeoTests extends Specification with NoTimeConversions with ClientUtils {
 
   def createTestIndexWithMapping =
     awaitResult(testIndex.create(Seq(
-      Mapping(testTypeName, properties = Seq(
-        Mapping("name", fieldType = MappingType.string),
-        Mapping("position", fieldType = MappingType.geo_point) extendWith GeoPointMapping(indexLatLon = true)
+      ObjectMapping(testTypeName, properties = Set(
+        StringMapping("name"),
+        GeoPointMapping("position", indexLatLon = true)
       ))
     )))
 

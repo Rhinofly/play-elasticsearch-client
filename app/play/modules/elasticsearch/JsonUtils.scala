@@ -10,7 +10,7 @@ trait JsonUtils {
 
   /**
    * These functions are used to create Json objects from filtered sequences of (String, JsValue) tuples.
-   * When the JsValue in a tuple is JsNull, that tuple is considered not valid, and will be filtered out.
+   * When the JsValue in a tuple is JsNull or an empty JsObject, that tuple is considered not valid, and will be filtered out.
    */
 
   protected def toJsonIfValid[T: Writes](value: T, isValid: T => Boolean): JsValue =
@@ -21,6 +21,7 @@ trait JsonUtils {
 
   protected def isValidJsonProperty(property: (String, JsValue)) =
     property match {
+      case (_, obj: JsObject) => obj.fields.length > 0
       case (k, v) => (v != JsNull)
     }
 
