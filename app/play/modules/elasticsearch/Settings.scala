@@ -14,7 +14,7 @@ import play.modules.elasticsearch.mapping.Mapping
  */
 case class Settings(
     nrOfShards: Int = 1,
-    nrOfReplicas: Int = 1,
+    nrOfReplicas: Int = 0,
     analysis: Option[Analysis] = None
   ) {
 

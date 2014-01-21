@@ -1,25 +1,32 @@
 package play.modules.elasticsearch.analysis
 
-import org.specs2.mutable.Specification
+import org.specs2.execute.{AsResult, Result}
+import org.specs2.mutable.{Around, Specification}
+import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
 import play.api.libs.json.{Format, JsObject, Json, JsPath, JsSuccess, Reads, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.modules.elasticsearch.{ClientUtils, JsonUtils}
+import play.modules.elasticsearch.{ClientUtils, JsonUtils, Settings}
+import play.modules.elasticsearch.mapping.{Mapping, NestableMapping, ObjectMapping, StringMapping}
+import play.modules.elasticsearch.query.{MultiMatchQuery, TermQuery}
 
 object AnalysisTests extends Specification with NoTimeConversions with ClientUtils {
 
   /**
-   * Test implicit Format[T]
+   * Test implicit Format[T] both ways (reads / writes).
    */
   def jsonFormatTest[T: Format](t: T, j: JsObject) = {
     Json.toJson(t) === j
-    Json.fromJson[T](j).asOpt === Some(t) // Option throws away the path.
+    Json.fromJson[T](j).asOpt === Some(t) // Turning this into Option[T] throws away the path from the JsResult.
   }
 
   /**
-   * Test round-trip for Sequence formats.
-   * Sequences of analyzers (tokenizers, ...) are used in JSON definition objects of the form
-   * {"name1": {<definition1>}, "name2": {<definition2>} ... } as expected by ElasticSearch
+   * Test round-trip for list-formats.
+   * Lists of analyzers / tokenizers / tokenfilters / charfilters are used in JSON definition objects of the form
+   *   {"name1": {<definition1>}, "name2": {<definition2>} ... }
+   * as expected by ElasticSearch.
+   * See Analyzer.analyzerListReads and Analyzer.analyzerListWrites.
+   * Here we test sequences of one component by writing it to JSON, then reading it.
    */
   def analyzerSeqTest(t: Analyzer) = {
     Analyzer.analyzerListReads.reads(Analyzer.analyzerListWrites.writes(Seq(t))) === JsSuccess(Seq(t))
@@ -35,6 +42,17 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
 
   def charFilterSeqTest(f: CharFilter) = {
     CharFilter.filterListReads.reads(CharFilter.filterListWrites.writes(Seq(f))) === JsSuccess(Seq(f))
+  }
+
+  abstract class WithTestIndexWithAnalysis(analysis: Analysis, mapping: NestableMapping) extends Scope with Around {
+    def around[T: AsResult](t: => T): Result = {
+      if (existsTestIndex) deleteTestIndex
+      awaitResult( testIndex.create(Settings(analysis = Some(analysis)), Seq(ObjectMapping(testTypeName, properties = Set(mapping)))) )
+      try {
+        AsResult(t)
+      }
+      // Leave the testIndex for inspection.
+    }
   }
 
   sequential
@@ -220,6 +238,19 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
 
       "recognized when part of a definition object" in {
         tokenizerSeqTest(StandardTokenizer("standard1"))
+      }
+
+      val analysis = Analysis(
+        analyzers = Seq(CustomAnalyzer("test-analyzer", tokenizer = "test-tokenizer")),
+        tokenizers = Seq(StandardTokenizer("test-tokenizer", maxTokenLength = 3))
+      )
+      val mapping = StringMapping("test-field", analyzer = "test-analyzer")
+      "is used for indexing and querying" in new WithTestIndexWithAnalysis(analysis, mapping) {
+        index(id = "1", doc = Json.obj("test-field" -> "one two three four"), "refresh" -> "true")
+        val result1 = search[JsObject](TermQuery("test-field", "one"))
+        val result2 = search[JsObject](TermQuery("test-field", "four"))
+        result1.hitsTotal === 1
+        result2.hitsTotal === 0
       }
 
     }
@@ -623,6 +654,27 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
         tokenFilterSeqTest(filter1)
       }
 
+      val analysis = Analysis(
+        analyzers = Seq(CustomAnalyzer("test-analyzer", tokenizer = "standard", filter = Some(Seq("synonym")))),
+        filters = Seq(SynonymTokenFilter("synonym", synonyms = Some(Seq("mini, small, little, slight", "big, great, tall"))))
+      )
+      val mapping = StringMapping("test-field", analyzer = "test-analyzer")
+      "is used for indexing and querying" in new WithTestIndexWithAnalysis(analysis, mapping) {
+        index(id = "1", doc = Json.obj("test-field" -> "This is a small sentence.", "not-analyzed" -> "This is a small sentence."), "refresh" -> "true")
+        val result0 = search[JsObject](TermQuery("test-field", "tiny"))
+        val result1 = search[JsObject](TermQuery("test-field", "small"))
+        val result2 = search[JsObject](TermQuery("test-field", "little"))
+        val result3 = search[JsObject](MultiMatchQuery(fields = Seq("test-field", "not-analyzed"), value = "little"))
+        val result4 = search[JsObject](TermQuery("not-analyzed", "small"))
+        val result5 = search[JsObject](TermQuery("not-analyzed", "little"))
+        result0.hitsTotal === 0
+        result1.hitsTotal === 1
+        result2.hitsTotal === 1
+        result3.hitsTotal === 1
+        result4.hitsTotal === 1
+        result5.hitsTotal === 0
+      }
+
     }
 
     "have a DictionaryDecompounderTokenFilter class that" >> {
@@ -911,6 +963,41 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
 
       "is recognized when part of a definition object" in {
         charFilterSeqTest(PatternReplaceCharFilter("PatternReplaceCharFilter", pattern="sample(.*)", replacement="replacedSample $1"))
+      }
+
+    }
+
+    /* A more complicated example to test a real-world case. */
+    // It looks like the query is not properly analyzed.
+
+    "be useful for Dutch texts" >> {
+      val nlTokenFilters = Seq("ascii_folding", "lowercase", "nl_synonyms", "nl_stemmer")
+      val analysis = Analysis(
+        analyzers = Seq(
+          CustomAnalyzer("nl_text",
+            tokenizer = "standard",
+            filter = Some(nlTokenFilters)),
+          CustomAnalyzer("nl_html",
+            tokenizer = "standard",
+            filter = Some(nlTokenFilters),
+            charFilter = Some(Seq("html")))),
+        tokenizers = Seq(),
+        filters = Seq(
+          AsciiFoldingTokenFilter("ascii_folding"),
+          LowercaseTokenFilter("lowercase"),
+          StemmerTokenFilter("nl_stemmer", language = "dutch"),
+          SynonymTokenFilter("nl_synonyms", synonyms = Some(Seq("bijzonder, speciaal", "fiets, rijwiel")))),
+        charFilters = Seq(
+          HtmlStripCharFilter("html")))
+      val mapping = StringMapping("test-field", analyzer = "nl_text")
+      "used for indexing and querying" in new WithTestIndexWithAnalysis(analysis, mapping) {
+        index(id = "1", doc = Json.obj("test-field" -> "Mijn bijzondere fiets is gestolen."), "refresh" -> "true")
+        val result0 = search[JsObject](TermQuery("test-field", "fiets"))
+        val result1 = search[JsObject](TermQuery("test-field", "rijwiel"))
+        val result2 = search[JsObject](TermQuery("test-field", "speciaal"))
+        result0.hitsTotal === 1
+        result1.hitsTotal === 1
+        result2.hitsTotal === 1
       }
 
     }
