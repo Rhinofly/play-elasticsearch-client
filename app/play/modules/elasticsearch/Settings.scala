@@ -49,7 +49,7 @@ object Settings extends JsonUtils {
   implicit lazy val settingsFormat: Format[Settings]  = (
     (__ \ "index.number_of_shards").format(intStringFormat) and
     (__ \ "index.number_of_replicas").format(intStringFormat) and
-    (__ \ "analysis").formatNullable[Analysis]
+    (__ \ "index.analysis").formatNullable[Analysis]
   )(Settings.apply, unlift(Settings.unapply))
 
 }

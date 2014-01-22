@@ -18,7 +18,8 @@ import play.api.libs.json.JsArray
  * under logical names that can then be referenced either in mapping definitions or in certain APIs.
  *
  * Currently we define components (analyzers, tokenizers, tokenfilters, charfilters) that are listed in the ElasticSearch reference (0.90).
- * The code specifying which analysis components are available can be found at https://github.com/elasticsearch/elasticsearch/blob/master/src/main/java/org/elasticsearch/index/analysis/AnalysisModule.java
+ * The code specifying which analysis components are available can be found at
+ *   https://github.com/elasticsearch/elasticsearch/blob/master/src/main/java/org/elasticsearch/index/analysis/AnalysisModule.java
  */
 case class Analysis(
     analyzers: Seq[Analyzer] = Seq.empty,

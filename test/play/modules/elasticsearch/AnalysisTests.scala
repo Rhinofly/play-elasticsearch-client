@@ -7,8 +7,8 @@ import org.specs2.time.NoTimeConversions
 import play.api.libs.json.{Format, JsObject, Json, JsPath, JsSuccess, Reads, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.modules.elasticsearch.{ClientUtils, JsonUtils, Settings}
-import play.modules.elasticsearch.mapping.{Mapping, NestableMapping, ObjectMapping, StringMapping}
-import play.modules.elasticsearch.query.{MultiMatchQuery, TermQuery}
+import play.modules.elasticsearch.mapping.{IndexType, Mapping, NestableMapping, ObjectMapping, StoreType, StringMapping}
+import play.modules.elasticsearch.query.{MatchQuery, MultiMatchQuery, TermQuery}
 
 object AnalysisTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -406,6 +406,24 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
 
       "is recognized when part of a definition object" in {
         tokenFilterSeqTest(filter)
+      }
+
+      val analysis = Analysis(
+        analyzers = Seq(CustomAnalyzer("testanalyzer", tokenizer = "letter", filter = Some(Seq("asciifolding")))),
+        filters = Seq(AsciiFoldingTokenFilter("asciifolding"))
+      )
+      val mapping = StringMapping("testfield", analyzer = "testanalyzer", store = StoreType.yes)
+      "is used for indexing and querying" in new WithTestIndexWithAnalysis(analysis, mapping) {
+        val sentence = "\u00AB Conna\u00EEtre le pass\u00E9 est une mani\u00E8re de s\'en lib\u00E9rer. \u00BB"
+        index(id = "1", doc = Json.obj("testfield" -> sentence, "notanalyzed" -> sentence), "refresh" -> "true")
+        val result1 = search[JsObject](MatchQuery("testfield", "Connaitre"))
+        val result2 = search[JsObject](MatchQuery("testfield", "connaitre"))
+        val result3 = search[JsObject](MultiMatchQuery(fields = Seq("testfield", "notanalyzed"), value = "Connaitre"))
+        val result4 = search[JsObject](MatchQuery("notanalyzed", "Connaitre"))
+        result1.hitsTotal === 1
+        result2.hitsTotal === 0
+        result3.hitsTotal === 1
+        result4.hitsTotal === 0
       }
 
     }
@@ -970,15 +988,15 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
     /* A more complicated example to test a real-world case. */
     // It looks like the query is not properly analyzed.
 
-    "be useful for Dutch texts" >> {
+    "be capable of dealing with Dutch texts" >> {
       val nlTokenFilters = Seq("ascii_folding", "lowercase", "nl_synonyms", "nl_stemmer")
       val analysis = Analysis(
         analyzers = Seq(
           CustomAnalyzer("nl_text",
-            tokenizer = "standard",
+            tokenizer = "letter",
             filter = Some(nlTokenFilters)),
           CustomAnalyzer("nl_html",
-            tokenizer = "standard",
+            tokenizer = "letter",
             filter = Some(nlTokenFilters),
             charFilter = Some(Seq("html")))),
         tokenizers = Seq(),
@@ -989,17 +1007,26 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
           SynonymTokenFilter("nl_synonyms", synonyms = Some(Seq("bijzonder, speciaal", "fiets, rijwiel")))),
         charFilters = Seq(
           HtmlStripCharFilter("html")))
-      val mapping = StringMapping("test-field", analyzer = "nl_text")
-      "used for indexing and querying" in new WithTestIndexWithAnalysis(analysis, mapping) {
+      "for indexing and querying text" in new WithTestIndexWithAnalysis(analysis, StringMapping("test-field", analyzer = "nl_text")) {
         index(id = "1", doc = Json.obj("test-field" -> "Mijn bijzondere fiets is gestolen."), "refresh" -> "true")
-        val result0 = search[JsObject](TermQuery("test-field", "fiets"))
-        val result1 = search[JsObject](TermQuery("test-field", "rijwiel"))
-        val result2 = search[JsObject](TermQuery("test-field", "speciaal"))
-        result0.hitsTotal === 1
+        val result1 = search[JsObject](MatchQuery("test-field", "Fiets"))
+        val result2 = search[JsObject](MatchQuery("test-field", "rijwiel"))
+        val result3 = search[JsObject](MatchQuery("test-field", "speciaal"))
         result1.hitsTotal === 1
         result2.hitsTotal === 1
+        result3.hitsTotal === 1
       }
-
+      "for indexing and querying html" in new WithTestIndexWithAnalysis(analysis, StringMapping("test-field", analyzer = "nl_html")) {
+        index(id = "1", doc = Json.obj("test-field" -> "Mijn <em>bijzondere</em> fiets is <span>gestolen</span>."), "refresh" -> "true")
+        val result1 = search[JsObject](MatchQuery("test-field", "Fiets"))
+        val result2 = search[JsObject](MatchQuery("test-field", "rijwiel"))
+        val result3 = search[JsObject](MatchQuery("test-field", "speciaal"))
+        val result4 = search[JsObject](MatchQuery("test-field", "span"))
+        result1.hitsTotal === 1
+        result2.hitsTotal === 1
+        result3.hitsTotal === 1
+        result4.hitsTotal === 0
+      }
     }
 
   } // "Analysis should"
