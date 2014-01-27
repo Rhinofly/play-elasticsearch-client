@@ -1,15 +1,16 @@
 package play.modules.elasticsearch
 
-import scala.language.implicitConversions
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.json.Json.JsValueWrapper
+import scala.language.implicitConversions
 import scala.util.Try
 
 trait JsonUtils {
 
-  /*
+  /**
    * These functions are used to create Json objects from filtered sequences of (String, JsValue) tuples.
-   * When the JsValue in a tuple is JsNull, that tuple is considered not valid, and will be filtered out.
+   * When the JsValue in a tuple is JsNull or an empty JsObject, that tuple is considered not valid, and will be filtered out.
    */
 
   protected def toJsonIfValid[T: Writes](value: T, isValid: T => Boolean): JsValue =
@@ -20,6 +21,7 @@ trait JsonUtils {
 
   protected def isValidJsonProperty(property: (String, JsValue)) =
     property match {
+      case (_, obj: JsObject) => obj.fields.length > 0
       case (k, v) => (v != JsNull)
     }
 
@@ -38,6 +40,35 @@ trait JsonUtils {
     }
     def writes(value: Int) = JsString(value.toString)
   }
+
+  /**
+   * JSON combinators do not (yet) support JSON objects with only one field.
+   * This clever solution comes from EECOLOR (http://stackoverflow.com/questions/15042205/how-to-serialize-deserialize-case-classes-to-from-json-in-play-2-1).
+   * Unfortunately it leaves a path in the JsSuccess, which we don't do in out `Format`s
+  implicit class FormatBuilder[M[_], A](o: M[A]) {
+    import play.api.libs.functional.InvariantFunctor
+    import scala.language.higherKinds
+    def singleField[B](f1: A => B, f2: B => A)(implicit fu: InvariantFunctor[M]) =
+      fu.inmap[A, B](o, f1, f2)
+  }
+   */
+
+  /**
+   * Nullable formats with defaults.
+   */
+  def formatWithDefault[T : Format](path: JsPath, default: T): OFormat[T] =
+    path.formatNullable[T].inmap[T](_.getOrElse(default), {x: T => Some(x)})
+
+  /**
+   * Make a JsResult[Seq[T]] from a Seq[JsResult[T]]. If there are errors, only a JsError is returned.
+   */
+  def foldJsResults[T](results: Seq[JsResult[T]]) : JsResult[Seq[T]] =
+    results.foldRight[JsResult[Seq[T]]](JsSuccess(Seq.empty[T])) {
+      case (JsSuccess(result, _), JsSuccess(results, _)) => JsSuccess(result +: results)
+      case (JsSuccess(_, _), errors: JsError) => errors
+      case (error: JsError, JsSuccess(_, _)) => error
+      case (error: JsError, errors: JsError) => error ++ errors
+    }
 
 }
 

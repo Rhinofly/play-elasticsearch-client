@@ -2,11 +2,10 @@ package play.modules.elasticsearch
 
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.test.Helpers.BAD_REQUEST
-import play.api.libs.json.Writes
+import play.modules.elasticsearch.query.{MatchAllQuery, TermQuery}
 
 object ClientTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -247,8 +246,29 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             result === ()
           }
         }
-      }
-    }
+
+        "have a deleteByQuery method" >> {
+
+          "that deletes documents in a type which match a query" in new WithTestIndex {
+            index(id = "test1", doc = Json.obj("test" -> "111"))
+            index(id = "test2", doc = Json.obj("test" -> "222"))
+            refreshTestIndex
+            awaitResult(testType.deleteByQuery(TermQuery("test", "222")))
+            search[JsObject](MatchAllQuery()).hitsTotal === 1
+          }
+
+          "that deletes all documents in a type with a MatchAllQuery" in new WithTestIndex {
+            index(id = "test1", doc = Json.obj("test" -> "111"))
+            index(id = "test2", doc = Json.obj("test" -> "222"))
+            refreshTestIndex
+            awaitResult(testType.deleteByQuery(MatchAllQuery()))
+            search[JsObject](MatchAllQuery()).hitsTotal === 0
+          }
+
+        }
+
+      } // type should
+    } // index should
   }
 
 

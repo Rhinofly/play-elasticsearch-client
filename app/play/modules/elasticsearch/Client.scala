@@ -1,25 +1,17 @@
 package play.modules.elasticsearch
 
-import scala.concurrent.Future
-import play.api.http.ContentTypeOf
-import play.api.http.Writeable
+import ResponseHandlers.{convertJsonOrError, found, fromJsonOrError, ifExists, unitOrError}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsValue
-import play.api.libs.json.Reads
-import play.api.libs.json.Writes
-import play.api.libs.ws.Response
-import play.api.libs.ws.WS
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsError
-import play.api.libs.json.Json
-import play.modules.elasticsearch.query.{Query, ElasticSearchQuery}
-import play.api.libs.json.JsString
+import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json.{Reads, Writes}
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.libs.ws.{Response, WS}
+import play.api.libs.ws.Implicits._
+import play.modules.elasticsearch.mapping.Mapping
+import play.modules.elasticsearch.query.ElasticSearchQuery
+import scala.concurrent.Future
 import scala.language.existentials
-import scala.util.Try
-import scala.util.Success
-import scala.util.Failure
-import play.api.libs.json.JsNull
+import scala.util.{Failure, Success, Try}
 
 class Client(elasticSearchUrl: String) {
 
@@ -58,7 +50,7 @@ class Client(elasticSearchUrl: String) {
       url.post(settings.toJson).map(unitOrError)
 
     def create(mappings: Seq[Mapping]): Future[Unit] =
-      url.post(Mapping.jsonForTypes(mappings)).map(unitOrError)
+      url.post(Mapping.jsonForMappings(mappings)).map(unitOrError)
 
     def create(settings: Settings, mappings: Seq[Mapping]): Future[Unit] =
       url.post(settings.toJsonWithMappings(mappings)).map(unitOrError)
@@ -71,7 +63,7 @@ class Client(elasticSearchUrl: String) {
 
     /* Retrieve mappings for all types. */
     def mappings: Future[Seq[Mapping]] =
-      url("_mapping").get.map(convertJsonOrError(Mapping.typesFromJson))
+      url("_mapping").get.map(convertJsonOrError(Mapping.mappingsFromJson))
 
     /* Refresh will commit the index and make all documents findable. */
     def refresh(): Future[Unit] =
@@ -155,11 +147,14 @@ class Client(elasticSearchUrl: String) {
       // No need for method updateScript anticipated.
 
       /* Search APIs: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search.html */
-
       def search[T: Reads](query: ElasticSearchQuery, parameters: Parameter*): Future[SearchResult[T]] =
         url("_search", parameters: _*)
-          .post(query.toJson) // GET does not accept a http-body in Play2.1.
+          .post(query.toJson) // GET does not accept a http-body in Play2.1 (but later we added play.api.libs.ws.Implicits).
           .map(fromJsonOrError[SearchResult[T]])
+
+      /* Delete documents corresponding to a query. See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-delete-by-query.html */
+      def deleteByQuery[T](query: ElasticSearchQuery, parameters: Parameter*): Future[Boolean] =
+        url("_query", parameters: _*).delete(query.toJson \ "query").map(found)
 
     }
   }
