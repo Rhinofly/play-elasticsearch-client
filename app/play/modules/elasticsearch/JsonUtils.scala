@@ -10,27 +10,57 @@ trait JsonUtils {
 
   /**
    * These functions are used to create Json objects from filtered sequences of (String, JsValue) tuples.
-   * When the JsValue in a tuple is JsNull or an empty JsObject, that tuple is considered not valid, and will be filtered out.
+   * When the JsValue in a tuple is JsNull or JsUndefined or an empty JsObject, that tuple is considered not valid, and will be filtered out.
    */
 
+  /**
+   * Create a JsValue from `value`, which is valid if the `isValid` function applied to `value` is true.
+   */
   protected def toJsonIfValid[T: Writes](value: T, isValid: T => Boolean): JsValue =
     if (isValid(value)) Json.toJson(value) else JsNull
 
+  /**
+   * Create a JsValue from `xform` applied to `value`, which is valid if the `isValid` function applied to `value` is true.
+   */
+  protected def toJsonIfValid[T, S: Writes](value: T, isValid: T => Boolean, xform: T => S): JsValue =
+    if (isValid(value)) Json.toJson(xform(value)) else JsNull
+
+  /**
+   * Create a JsValue from `value`, which is valid if `value` is not equal to `default`.
+   */
   protected def toJsonIfNot[T: Writes](value: T, default: T): JsValue =
     if (value != default) Json.toJson(value) else JsNull
 
+  /**
+   * Create a JsValue from `xform` applied to `value`, which is valid if `value` is not equal to `default`.
+   */
+  protected def toJsonIfNot[T, S: Writes](value: T, default: T, xform: T => S): JsValue =
+    if (value != default) Json.toJson(xform(value)) else JsNull
+
+  /**
+   * Determines if a property (String, JsValue) is valid, by testing the JsValue in the second item.
+   */
   protected def isValidJsonProperty(property: (String, JsValue)) =
     property match {
       case (_, obj: JsObject) => obj.fields.length > 0
-      case (k, v) => (v != JsNull)
+      case (_, v) => (v != JsNull && v != JsUndefined)
     }
 
+  /**
+   * Filters a series of properties, keeping only the valid ones.
+   */
   protected def filterValid(properties: (String, JsValue)*) =
     properties.filter(isValidJsonProperty)
 
+  /**
+   * Create a Json object by filtering a series of properties.
+   */
   protected def toJsonObject(properties: (String, JsValue)*) =
     JsObject(filterValid(properties:_*))
 
+  /**
+   * Format for an integer represented by a Json string.
+   */
   val intStringFormat = new Format[Int] {
     def reads(jsValue: JsValue) = jsValue match {
       case JsString(value) => Try {
@@ -77,12 +107,16 @@ trait JsonUtils {
  * See http://perevillega.com/blog/2013/09/21/enums-to-json-in-scala/
  */
 object EnumUtils {
+
   def enumReads[E <: Enumeration](enum: E): Reads[E#Value] =
+    enumReadsWithTransform(enum, identity[String])
+
+  def enumReadsWithTransform[E <: Enumeration](enum: E, xform: String => String): Reads[E#Value] =
     new Reads[E#Value] {
       def reads(json: JsValue): JsResult[E#Value] = json match {
         case JsString(s) => {
           try {
-            JsSuccess(enum.withName(s))
+            JsSuccess(enum.withName(xform(s)))
           } catch {
             case _: NoSuchElementException =>
               JsError(s"Enumeration expected of type: '${enum.getClass}', but it does not appear to contain the value: '$s'")
@@ -92,12 +126,18 @@ object EnumUtils {
       }
   }
 
-  implicit def enumWrites[E <: Enumeration]: Writes[E#Value] =
+  def enumWrites[E <: Enumeration]: Writes[E#Value] =
     new Writes[E#Value] {
       def writes(v: E#Value): JsValue = JsString(v.toString)
     }
 
-  implicit def enumFormat[E <: Enumeration](enum: E): Format[E#Value] = {
+  def enumWritesWithTransform[E <: Enumeration](xform: String => String): Writes[E#Value] =
+    new Writes[E#Value] {
+      def writes(v: E#Value): JsValue = {println("***> "+xform(v.toString));JsString(xform(v.toString))}
+    }
+
+  def enumFormat[E <: Enumeration](enum: E): Format[E#Value] = {
     Format(enumReads(enum), enumWrites)
   }
+
 }

@@ -46,7 +46,7 @@ object NumberMapping extends JsonUtils {
 object NumberType extends Enumeration {
   val float, double, integer, long, short, byte = Value
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(NumberType)
-  implicit def enumWrites: Writes[Value] = EnumUtils.enumWrites
+  implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }
 
 class NumberMappingFor(numberType: NumberType.Value) extends MappingType {

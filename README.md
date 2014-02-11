@@ -1,6 +1,12 @@
 Play 2.1 ElasticSearch Client
 =============================
 
+Description
+-----------
+
+This is an ElasticSearch client to be used in applications built in the Play framework.
+It can be used with ElasticSearch version 0.90.6 or higher.
+The Play 2.1 (or higher) framework is required for its JSON handling capabilities.
 
 Installation
 ------------
@@ -17,7 +23,7 @@ Add the dependency:
 
 ``` scala
 	val appDependencies = Seq(
-      "nl.rhinofly" %% "play-elasticsearch-client" % "0.1"
+      "nl.rhinofly" %% "play-elasticsearch-client" % "x.y"
     )
 ```
 

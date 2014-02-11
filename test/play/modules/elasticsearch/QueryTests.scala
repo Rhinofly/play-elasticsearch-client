@@ -2,44 +2,16 @@ package play.modules.elasticsearch
 
 import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
-
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.modules.elasticsearch.query.{BoolQuery, MatchAllQuery, MatchQuery, MatchType, MultiMatchQuery, Operator, TermQuery, TermsQuery}
+import play.modules.elasticsearch.query._
+import play.modules.elasticsearch.query.Query.queryToElasticSearchQuery
 
 object QueryTests extends Specification with NoTimeConversions with ClientUtils {
 
   sequential
 
   "Query" should {
-
-    br
-
-    "be used by the search method" >> {
-
-      "that accepts the query-property 'version'" in new WithTestIndex {
-        val testContent = "test has some content"
-        val version = index(id = "test", doc = Json.obj("test" -> testContent), "refresh" -> "true")
-        val result = search[JsObject](TermQuery("test", "content").withVersion(true))
-        result.hitsTotal === 1
-        result.hits(0).version === Some(version)
-        result.hits(0).source === Json.obj("test" -> testContent)
-      }
-
-      "that accepts the query-properties 'from' and 'size'" in new WithTestIndex {
-        val testContent = "test has some content"
-        index(id = "test1", doc = Json.obj("test" -> testContent))
-        index(id = "test2", doc = Json.obj("test" -> testContent))
-        index(id = "test3", doc = Json.obj("test" -> testContent))
-        index(id = "test4", doc = Json.obj("test" -> testContent))
-        refreshTestIndex
-        val result = search[JsObject](TermQuery("test", "content").withFrom(1).withSize(2))
-        result.hitsTotal === 4
-        result.hits.length === 2
-        result.hits(0).source === Json.obj("test" -> testContent)
-      }
-
-    }
 
     br
 
@@ -140,6 +112,7 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
 
       "that finds no documents if none exist" in new WithTestIndex {
         val result = search[JsObject](MatchAllQuery())
+        refreshTestIndex // Otherwise random stuff might hang around in some cache, producing weird errors.
         result.hitsTotal === 0
       }
 
@@ -198,6 +171,18 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         result1.hitsTotal === 3
         result2.hitsTotal === 2
         result3.hitsTotal === 0
+      }
+
+    }
+
+    "have a QueryStringQuery sub-class" >> {
+
+      "that finds documents" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two three"))
+        index(id = "test2", doc = Json.obj("test" -> "one two"))
+        refreshTestIndex
+        val result = search[JsObject](QueryStringQuery("one AND three"))
+        result.hitsTotal === 1
       }
 
     }

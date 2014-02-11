@@ -21,5 +21,5 @@ object RangeExecution extends Enumeration {
   val index, fielddata = Value
   val default = index
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(RangeExecution)
-  implicit def enumWrites: Writes[Value] = EnumUtils.enumWrites
+  implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }

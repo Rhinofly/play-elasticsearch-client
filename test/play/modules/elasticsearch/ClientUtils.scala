@@ -34,7 +34,7 @@ trait ClientUtils { self: Specification with NoTimeConversions =>
   def testType = testIndex(typeName = testTypeName)
 
   def testClientHealth = awaitResult(testClient.health)
-  def createTestIndex = awaitResult(testIndex.create)
+  def createTestIndex = awaitResult(testIndex.create(Settings()))
   def deleteTestIndex = awaitResult(testIndex.delete)
   def existsTestIndex = awaitResult(testIndex.exists)
   def refreshTestIndex = awaitResult(testIndex.refresh)

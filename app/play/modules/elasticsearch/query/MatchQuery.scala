@@ -10,12 +10,16 @@ import play.modules.elasticsearch.JsonUtils
 case class MatchQuery(
   field: String,
   value: String,
-  operator: Operator.Value = Operator.or,
-  matchType: MatchType.Value = MatchType.boolean,
-  minimumShouldMatch: String = "",
-  fuzziness: Double = -3.14,
-  slop: Int = 0,
-  lenient: Boolean = false
+  matchType: MatchType.Value = MatchQuery.defaultMatchType,
+  operator: Operator.Value = MatchQuery.defaultOperator,
+  minimumShouldMatch: String = MatchQuery.defaultMinimumShouldMatch,
+  analyzer: String =MatchQuery.defaultAnalyzer,
+  fuzziness: Double = MatchQuery.defaultFuzziness,
+  fuzzyPrefixLength: Int = MatchQuery.defaultFuzzyPrefixLength,
+  fuzzyMaxExpansions: Int = MatchQuery.defaultFuzzyMaxExpansions,
+  cutoffFrequency: Double = MatchQuery.defaultCutoffFrequency,
+  slop: Int = MatchQuery.defaultSlop,
+  lenient: Boolean = MatchQuery.defaultLenient
 ) extends Query with JsonUtils {
 
   def toQueryDSL =
@@ -23,14 +27,31 @@ case class MatchQuery(
       Json.obj(field ->
         toJsonObject(
           "query" -> JsString(value),
-          "operator" -> JsString(operator.toString()),
-          "type" -> toJsonIfValid(matchType.toString, {x:String => x != MatchType.boolean.toString}),
-          "minimum_should_match" -> toJsonIfValid[String](minimumShouldMatch, _ != ""),
-          "fuzziness" -> toJsonIfValid[Double](fuzziness, _ >= 0.0),
-          "slop" -> toJsonIfValid[Int](slop, _ > 0),
-          "lenient" -> toJsonIfValid[Boolean](lenient, x => x)
+          "type" -> toJsonIfNot(matchType, MatchQuery.defaultMatchType),
+          "operator" -> toJsonIfNot(operator, MatchQuery.defaultOperator),
+          "minimum_should_match" -> toJsonIfNot(minimumShouldMatch, MatchQuery.defaultMinimumShouldMatch),
+          "analyzer" -> toJsonIfNot(analyzer, MatchQuery.defaultAnalyzer),
+          "fuzziness" -> toJsonIfNot(fuzziness, MatchQuery.defaultFuzziness),
+          "prefix_length" -> toJsonIfNot(fuzzyPrefixLength, MatchQuery.defaultFuzzyPrefixLength),
+          "max_expansions" -> toJsonIfNot(fuzzyMaxExpansions, MatchQuery.defaultFuzzyMaxExpansions),
+          "cutoff_frequency" -> toJsonIfNot(cutoffFrequency, MatchQuery.defaultCutoffFrequency),
+          "slop" -> toJsonIfNot(slop, MatchQuery.defaultSlop),
+          "lenient" -> toJsonIfNot(lenient, MatchQuery.defaultLenient)
         )
       )
     )
 
+}
+
+object MatchQuery {
+  val defaultMatchType: MatchType.Value = MatchType.boolean
+  val defaultOperator: Operator.Value = Operator.or
+  val defaultMinimumShouldMatch: String = ""
+  val defaultAnalyzer: String = ""
+  val defaultFuzziness: Double = -1.0
+  val defaultFuzzyPrefixLength: Int = 0
+  val defaultFuzzyMaxExpansions: Int = 50
+  val defaultCutoffFrequency = -1.0
+  val defaultSlop: Int = 0
+  val defaultLenient: Boolean = false
 }

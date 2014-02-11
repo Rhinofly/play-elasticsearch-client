@@ -139,14 +139,14 @@ object IndexType extends Enumeration {
   val analyzed, no, not_analyzed = Value
   val default = analyzed
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(IndexType)
-  implicit def enumWrites: Writes[Value] = EnumUtils.enumWrites
+  implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }
 
 object TermVectorType extends Enumeration {
   val no, yes, with_offsets, with_positions, with_positions_offsets = Value
   val default = no
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(TermVectorType)
-  implicit def enumWrites: Writes[Value] = EnumUtils.enumWrites
+  implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }
 
 object BoostType {
