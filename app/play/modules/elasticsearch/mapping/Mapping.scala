@@ -91,27 +91,37 @@ object Mapping {
   }
 
   /**
-   * Read a top-level mapping from JSON, possibly adding additional properties.
+   * Read a top-level mapping from JSON.
+   * This starts with the NestableMappiung properties, then adds extra properties for field data and root object.
+   * @param field A JSON structure of the form
+   *   { <type> : { "properties" : ... } }
    */
   def fromJsonRoot(field: (String, JsValue)): Mapping =
-    field match {case (_, fieldSpec) =>
-      RootObjectMapping.addToFromJson(fieldSpec, MappingWithFieldData.addToFromJson(fieldSpec, fromJson(field)))
+    field match {
+      case (_, fieldSpec) => RootObjectMapping.addToFromJson(fieldSpec, MappingWithFieldData.addToFromJson(fieldSpec, fromJson(field)))
+      case _ => throw ElasticSearchException(-1, "Bad mappings received in fromJsonRoot("+field._1+").", field._2)
     }
 
   /**
-   * Read mappings from an index.
-   * This must be applied to the JSON from a response to "<index>/_mapping". This implies that the top-level key is the index name, and is discarded.
+   * Read mappings for an index.
+   * This must be applied to the JSON from a response to "<index>/_mapping" or "<index>/<type>/_mapping".
+   * The JSON for the mappings is like:
+   *   { <index> : { "mappings" : { <type> : { "properties" : ... } } } }
    */
   def mappingsFromJson(mappings: JsValue): Seq[Mapping] = mappings match {
-    case JsObject(Seq((indexName, jsMappings))) => jsMappings match {
+    case JsObject(Seq( (indexName, JsObject(Seq( ("mappings", jsMappings)))))) => jsMappings match {
       case JsObject(fields) => fields map {fromJsonRoot(_)}
       case _ => Seq.empty[Mapping]
     }
     case _ => throw ElasticSearchException(-1, "Bad mappings received in mappingsFromJson.", mappings)
   }
 
+  /**
+   * The reads expects JSON of the form
+   *   { <index> : { "mappings" : { <type> : { "properties" :  ... } } } }
+   */
   implicit val reads: Reads[Mapping] = Reads {
-    case json: JsObject => JsSuccess(fromJson(json.fields.head))
+    case json: JsObject => JsSuccess(mappingsFromJson(json).head)
     case mappings => throw ElasticSearchException(-1, "Bad mappings received in reads.", mappings)
   }
 

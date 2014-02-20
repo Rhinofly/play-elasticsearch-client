@@ -6,6 +6,7 @@ import play.api.libs.json.{JsObject, Json, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.test.Helpers.BAD_REQUEST
 import play.modules.elasticsearch.query.{MatchAllQuery, TermQuery}
+import play.api.libs.json.JsArray
 
 object ClientTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -159,7 +160,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           "to retrieve a document by id from the index and type" in new WithTestIndex {
 
             val (id, version) = index(doc = testDocument)
-            val optionalTestDocument = get[TestDocument](id = id)
+            val optionalTestDocument = getV[TestDocument](id = id)
             optionalTestDocument must beLike {
               case Some((v, doc)) =>
                 v === version
@@ -171,25 +172,26 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             index("non-existing", testDocument)
             del("non-existing")
 
-            val optionalTestDocument = get[TestDocument](id = "non-existing")
+            val optionalTestDocument = getV[TestDocument](id = "non-existing")
             optionalTestDocument === None
           }
 
           "that throws an exception when retrieving from an index that does not exist"  in {
             if (existsTestIndex) deleteTestIndex else ()
-            get[TestDocument](id = "anything") must throwA[ElasticSearchException]
+            getV[TestDocument](id = "anything") must throwA[ElasticSearchException]
           }
 
           "that accepts parameters" in new WithTestIndex {
             val (id, _) = index(Json.obj("name" -> "name", "test" -> "test"))
-            val Some((_, optionalTestDocument)) = get[JsObject](id, "fields" -> "name")
-
-            optionalTestDocument === Json.obj("name" -> "name")
+            refreshTestIndex
+            val optionalTestDocument = get[JsObject](id, "fields" -> "name")
+            optionalTestDocument === Some(Json.obj("name" -> Seq("name")))
           }
 
           "that does not return a version" in new WithTestIndex {
             val (id, _) = index(testDocument)
-            val retrievedDocument = awaitResult(testType.get[TestDocument](id))
+            refreshTestIndex
+            val retrievedDocument = get[TestDocument](id)
             retrievedDocument === Some(testDocument)
           }
         }
@@ -197,10 +199,15 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
         "have a delete method" >> {
 
           "that deletes a document from the index and type" in new WithTestIndex {
-            index(id = "test", doc = Json.obj("test" -> "test"))
+            index(id = "test", doc = testDocument)
+            refreshTestIndex
+            val optionalTestDocument1 = get[TestDocument](id = "test")
             val deleted = del("test")
-            val optionalTestDocument = get[TestDocument](id = "test")
-            (deleted === true) and (optionalTestDocument === None)
+            refreshTestIndex
+            val optionalTestDocument2 = get[TestDocument](id = "test")
+            deleted === true
+            optionalTestDocument1 === Some(testDocument)
+            optionalTestDocument2 === None
           }
 
           "that does not delete a non existing document from the index and type" in new WithTestIndex {
@@ -222,7 +229,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           "that updates a document in the index and type" in new WithTestIndex {
             index(id = "test", doc = Json.obj("test" -> "test"))
             val nextVersion = update(id = "test", doc = Json.obj("test" -> "next test"))
-            val optionalTestDocument = get[JsObject](id = "test")
+            val optionalTestDocument = getV[JsObject](id = "test")
             optionalTestDocument must beLike {
               case Some((v, doc)) =>
                 v === nextVersion
@@ -233,7 +240,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           "that can do partial updates" in new WithTestIndex {
             index(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
             update(id = "test", doc = Json.obj("content" -> "new content"))
-            val optionalTestDocument = get[JsObject](id = "test")
+            val optionalTestDocument = getV[JsObject](id = "test")
             optionalTestDocument must beLike {
               case Some((_, doc)) =>
                 doc === Json.obj("test" -> "test", "content" -> "new content")

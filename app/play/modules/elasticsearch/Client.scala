@@ -1,6 +1,6 @@
 package play.modules.elasticsearch
 
-import ResponseHandlers.{convertJsonOrError, found, fromJsonOrError, ifExists, unitOrError}
+import ResponseHandlers._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsNull, JsObject, Json}
 import play.api.libs.json.{Reads, Writes}
@@ -56,10 +56,10 @@ class Client(elasticSearchUrl: String) {
       url.post(settings.toJsonWithMappings(mappings)).map(unitOrError)
 
     def delete(): Future[Boolean] =
-      url.delete.map(found)
+      url.delete.map(foundOrError)
 
     def exists: Future[Boolean] =
-      url.head.map(found)
+      url.head.map(foundOrError)
 
     /* Retrieve mappings for all types. */
     def mappings: Future[Seq[Mapping]] =
@@ -102,7 +102,7 @@ class Client(elasticSearchUrl: String) {
 
       /* Retrieve the mapping as an option, returning None if there is no mapping for the type. */
       def mappingOpt(implicit mappingReads: Reads[Mapping]) : Future[Option[Mapping]] =
-        url("_mapping").get().map(response => if(response.status != 404) Some(fromJsonOrError(mappingReads)(response)) else None)
+        url("_mapping").get().map(check(found, check(resultNotEmpty, fromJsonOptOrError(mappingReads))))
 
       /* Index a document: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-index_.html */
       def index[T: Writes](id: Identifier, doc: T, parameters: Parameter*): Future[Unit] =
@@ -121,17 +121,15 @@ class Client(elasticSearchUrl: String) {
       /* Get: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-get.html */
       def get[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[T]] =
         url(id, parameters: _*)
-          .get().map(ifExists(fromJsonOrError(sourceOrFieldsReader[T])))
+          .get().map(check(resultExists, fromJsonOptOrError(sourceOrFieldsReader[T])))
 
       def getV[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[(Version, T)]] =
         url(id, parameters: _*)
-          .get().map(ifExists(fromJsonOrError[(Version, T)]))
+          .get().map(check(resultExists, fromJsonOptOrError[(Version, T)]))
 
       /* Delete: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-delete.html */
       def delete[T](id: Identifier, parameters: Parameter*): Future[Boolean] =
-        url(id, parameters: _*)
-          .delete()
-          .map(found)
+        url(id, parameters: _*).delete().map(foundOrError)
 
       /* Update: www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-update.html */
       def update[T](id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[Unit] =
@@ -154,7 +152,7 @@ class Client(elasticSearchUrl: String) {
 
       /* Delete documents corresponding to a query. See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-delete-by-query.html */
       def deleteByQuery[T](query: ElasticSearchQuery, parameters: Parameter*): Future[Boolean] =
-        url("_query", parameters: _*).delete(query.toJson \ "query").map(found)
+        url("_query", parameters: _*).delete(query.toJson).map(foundOrError)
 
     }
   }

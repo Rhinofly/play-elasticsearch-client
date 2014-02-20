@@ -43,7 +43,7 @@ object ObjectMapping extends MappingType {
       fieldName,
       properties = (jsMapping \ "properties") match {
         case JsObject(fields) => fields.map(Mapping.fromJson(_)).toSet
-        case _ => throw ElasticSearchException(-1, "Bad properties in ObjectMapping.fromJson.", jsMapping)
+        case _ => throw ElasticSearchException(-1, "Bad properties in ObjectMapping.fromJson: ", jsMapping)
       },
       dynamic = (jsMapping \ "dynamic").asOpt[Boolean].getOrElse(defaultDynamic),
       enabled = (jsMapping \ "enabled").asOpt[Boolean].getOrElse(defaultEnabled),

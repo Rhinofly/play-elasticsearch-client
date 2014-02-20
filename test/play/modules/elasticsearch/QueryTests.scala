@@ -111,8 +111,8 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
     "have a MatchAllQuery sub-class" >> {
 
       "that finds no documents if none exist" in new WithTestIndex {
-        val result = search[JsObject](MatchAllQuery())
         refreshTestIndex // Otherwise random stuff might hang around in some cache, producing weird errors.
+        val result = search[JsObject](MatchAllQuery())
         result.hitsTotal === 0
       }
 

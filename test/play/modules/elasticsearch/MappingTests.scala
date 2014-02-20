@@ -170,7 +170,6 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
       "have a create method that defines mappings for the index" in {
         if (existsTestIndex) deleteTestIndex
         val result = createTestIndexWithMapping
-        deleteTestIndex
         result === ()
       }
 
@@ -215,7 +214,7 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
 
         "use the mapping for indexing" in new WithTestIndexWithMapping {
           val (id, version) = index(doc = testDocumentJson, "refresh" -> "true")
-          val optionalTestDocument = get[JsObject](id = id)
+          val optionalTestDocument = getV[JsObject](id = id)
           optionalTestDocument must beLike {
             case Some((v, doc)) =>
               v === version
@@ -237,7 +236,7 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
           result2.hits.map(_.id) === List("2", "1")
         }
 
-      }
+      } // "type should"
 
     } // "index should"
 
@@ -284,11 +283,7 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
     def around[T: AsResult](t: => T): Result = {
       if (existsTestIndex) deleteTestIndex
       createTestIndexWithMapping
-      try {
-        AsResult(t)
-      } finally {
-        deleteTestIndex
-      }
+      AsResult(t)
     }
   }
 
