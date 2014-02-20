@@ -130,6 +130,17 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
         result.hits(0).highlightFor("content") must contain("Do not run with <em>scissors</em> because <em>running</em> with <em>scissors</em> is dangerous.")
       }
 
+      "show highlights in a complete field" in new WithTestIndexWithMapping {
+        index(id = "test1", doc = Json.obj(
+            "content" -> """In tegenstelling tot wat algemeen aangenomen wordt is Lorem Ipsum niet zomaar willekeurige tekst. het heeft zijn wortels in een stuk klassieke latijnse literatuur uit 45 v.Chr. en is dus meer dan 2000 jaar oud. Richard McClintock, een professor latijn aan de Hampden-Sydney College in Virginia, heeft een van de meer obscure latijnse woorden, consectetur, uit een Lorem Ipsum passage opgezocht, en heeft tijdens het zoeken naar het woord in de klassieke literatuur de onverdachte bron ontdekt. Lorem Ipsum komt uit de secties 1.10.32 en 1.10.33 van "de Finibus Bonorum et Malorum" (De uitersten van goed en kwaad) door Cicero, geschreven in 45 v.Chr. Dit boek is een verhandeling over de theorie der ethiek, erg populair tijdens de renaissance. De eerste regel van Lorem Ipsum, "Lorem ipsum dolor sit amet..", komt uit een zin in sectie 1.10.32."""
+        ))
+        refreshTestIndex
+        val result = search[JsObject](TermQuery("content", "ipsum").
+                       withHighlight(HighlightField("content", highlightType = HighlightType.fvh, numberOfFragments = 0)))
+        result.hits.length === 1
+        result.hits(0).highlightFor("content") must contain("""In tegenstelling tot wat algemeen aangenomen wordt is Lorem <em>Ipsum</em> niet zomaar willekeurige tekst. het heeft zijn wortels in een stuk klassieke latijnse literatuur uit 45 v.Chr. en is dus meer dan 2000 jaar oud. Richard McClintock, een professor latijn aan de Hampden-Sydney College in Virginia, heeft een van de meer obscure latijnse woorden, consectetur, uit een Lorem <em>Ipsum</em> passage opgezocht, en heeft tijdens het zoeken naar het woord in de klassieke literatuur de onverdachte bron ontdekt. Lorem <em>Ipsum</em> komt uit de secties 1.10.32 en 1.10.33 van "de Finibus Bonorum et Malorum" (De uitersten van goed en kwaad) door Cicero, geschreven in 45 v.Chr. Dit boek is een verhandeling over de theorie der ethiek, erg populair tijdens de renaissance. De eerste regel van Lorem <em>Ipsum</em>, "Lorem <em>ipsum</em> dolor sit amet..", komt uit een zin in sectie 1.10.32.""")
+      }
+
       "use tags in highlighted fragments" in new WithTestIndexWithMapping {
         index(id = "test1", doc = Json.obj("content" -> "Rose rose to put rose roes on her rows of roses."))
         refreshTestIndex
