@@ -260,7 +260,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             index(id = "test1", doc = Json.obj("test" -> "111"))
             index(id = "test2", doc = Json.obj("test" -> "222"))
             refreshTestIndex
-            awaitResult(testType.deleteByQuery(TermQuery("test", "222")))
+            awaitResult(testType.deleteByQuery(TermQuery("test", "222"))) === true
             search[JsObject](MatchAllQuery()).hitsTotal === 1
           }
 
@@ -268,7 +268,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             index(id = "test1", doc = Json.obj("test" -> "111"))
             index(id = "test2", doc = Json.obj("test" -> "222"))
             refreshTestIndex
-            awaitResult(testType.deleteByQuery(MatchAllQuery()))
+            awaitResult(testType.deleteByQuery(MatchAllQuery())) === true
             search[JsObject](MatchAllQuery()).hitsTotal === 0
           }
 
