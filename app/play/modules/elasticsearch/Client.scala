@@ -38,22 +38,38 @@ class Client(elasticSearchUrl: String) {
   case class Index(name: String) {
 
     /* Index APIs: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices.html */
-
     def url(implicit path: String = "") = Client.this.url(name + '/' + path)
+
+    /* Index health: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/cluster-health.html */
+    def health(parameters: Parameter*): Future[JsObject] =
+      Client.this.url("_cluster/health/"+name)
+        .withQueryString(parameters: _*)
+        .get()
+        .map(fromJsonOrError[JsObject])
+
+    /* Wait for the index creation process to finish. See https://github.com/elasticsearch/elasticsearch/issues/2527 */
+    private val waitForIndexAvailable: Response => Future[Unit] =
+      convertOrError(_ =>
+        health("wait_for_status" -> "yellow") map {health =>
+          if ((health \ "status").as[String] == "red")
+            throw ElasticSearchException(404, "Index ["+name+"] is not available.", health)
+          else ()
+        }
+      )
 
     /* Create can have settings or mappings parameters, or both. */
 
     def create(): Future[Unit] =
-      url.put(Array.empty[Byte]).map(unitOrError)
+      url.put(Array.empty[Byte]).flatMap(waitForIndexAvailable)
 
     def create(settings: Settings): Future[Unit] =
-      url.post(settings.toJson).map(unitOrError)
+      url.post(settings.toJson).flatMap(waitForIndexAvailable)
 
     def create(mappings: Seq[Mapping]): Future[Unit] =
-      url.post(Mapping.jsonForMappings(mappings)).map(unitOrError)
+      url.post(Mapping.jsonForMappings(mappings)).flatMap(waitForIndexAvailable)
 
     def create(settings: Settings, mappings: Seq[Mapping]): Future[Unit] =
-      url.post(settings.toJsonWithMappings(mappings)).map(unitOrError)
+      url.post(settings.toJsonWithMappings(mappings)).flatMap(waitForIndexAvailable)
 
     def delete(): Future[Boolean] =
       url.delete.map(foundOrError)
