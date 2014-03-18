@@ -1,7 +1,8 @@
 package play.modules.elasticsearch.query
 
-import play.api.libs.json._
-import play.modules.elasticsearch.JsonUtils
+import play.api.libs.json.{JsString, Json, Reads, Writes}
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.modules.elasticsearch.{EnumUtils, JsonUtils}
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-match-query.html
@@ -41,6 +42,14 @@ case class MatchQuery(
       )
     )
 
+}
+
+object MatchType extends Enumeration {
+  val boolean = Value("boolean")
+  val phrase = Value("phrase")
+  val phrase_prefix = Value("phrase_prefix")
+  implicit val enumReads: Reads[Value] = EnumUtils.enumReads(MatchType)
+  implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }
 
 object MatchQuery {

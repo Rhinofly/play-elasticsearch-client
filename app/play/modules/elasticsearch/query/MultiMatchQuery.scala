@@ -2,6 +2,7 @@ package play.modules.elasticsearch.query
 
 import play.api.libs.json._
 import play.modules.elasticsearch.JsonUtils
+import play.modules.elasticsearch.EnumUtils
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html
@@ -9,10 +10,10 @@ import play.modules.elasticsearch.JsonUtils
 case class MultiMatchQuery(
   fields: Seq[String],
   value: String,
-  operator: Operator.Value = Operator.or,
-  matchType : MatchType.Value = MatchType.boolean,
-  fuzziness: Double = -3.14,
-  slop: Int = 0
+  operator: Operator.Value = MultiMatchQuery.defaultOperator,
+  matchType : MultiMatchType.Value = MultiMatchQuery.defaultMultiMatchType,
+  fuzziness: Double = MultiMatchQuery.defaultFuzziness,
+  slop: Int = MultiMatchQuery.defaultSlop
 ) extends Query with JsonUtils {
 
   def toQueryDSL =
@@ -20,11 +21,30 @@ case class MultiMatchQuery(
       toJsonObject(
         "fields" -> Json.toJson(fields),
         "query" -> JsString(value),
-        "operator" -> JsString(operator.toString()),
-        "type" -> toJsonIfValid(matchType.toString, {x:String => x != MatchType.boolean.toString}),
-        "fuzziness" -> toJsonIfValid(fuzziness, {x:Double => x >= 0.0}),
-        "slop" -> toJsonIfValid(slop, {x:Int => x > 0})
+        "operator" -> toJsonIfNot(operator, MultiMatchQuery.defaultOperator),
+        "type" -> toJsonIfNot(matchType, MultiMatchQuery.defaultMultiMatchType),
+        "fuzziness" -> toJsonIfNot(fuzziness, MultiMatchQuery.defaultFuzziness),
+        "slop" -> toJsonIfNot(slop, MultiMatchQuery.defaultSlop)
       )
     )
 
+}
+
+/**
+ * Version 0.9.x: The query accepts all the options that a regular match query accepts.
+ * For the `type` option, this will change in 1.1.0.
+ */
+object MultiMatchType extends Enumeration {
+  val boolean = Value("boolean")
+  val phrase = Value("phrase")
+  val phrase_prefix = Value("phrase_prefix")
+  implicit val enumReads: Reads[Value] = EnumUtils.enumReads(MultiMatchType)
+  implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
+}
+
+object MultiMatchQuery {
+  val defaultOperator: Operator.Value = Operator.or
+  val defaultMultiMatchType: MultiMatchType.Value = MultiMatchType.boolean
+  val defaultFuzziness: Double = -1.0
+  val defaultSlop: Int = 0
 }

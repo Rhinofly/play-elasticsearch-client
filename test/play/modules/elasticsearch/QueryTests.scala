@@ -132,12 +132,8 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         index(id = "test1", doc = Json.obj("test" -> "one two three"))
         index(id = "test2", doc = Json.obj("test" -> "one two"))
         refreshTestIndex
-        val result = search[JsObject](
-          BoolQuery()
-            should TermQuery("test", "one")
-            must TermQuery("test", "two")
-            mustNot TermQuery("test", "three")
-        )
+        val query = BoolQuery() should TermQuery("test", "one") must TermQuery("test", "two") mustNot TermQuery("test", "three")
+        val result = search[JsObject](query)
         result.hitsTotal === 1
       }
 
@@ -145,15 +141,10 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         index(id = "test1", doc = Json.obj("test" -> "one two"))
         index(id = "test2", doc = Json.obj("test" -> "one three"))
         refreshTestIndex
-        val result1 = search[JsObject](
-          BoolQuery()
-            should TermQuery("test", "one")
-            should TermQuery("test", "two")
-        )
+        val query = BoolQuery() should TermQuery("test", "one") should TermQuery("test", "two")
+        val result1 = search[JsObject](query)
         val result2 = search[JsObject](
-          BoolQuery()
-            should TermQuery("test", "one")
-            should TermQuery("test", "three")
+          BoolQuery() should TermQuery("test", "one") should TermQuery("test", "three")
         )
         result1.hits.map(_.id) === List("test1", "test2")
         result2.hits.map(_.id) === List("test2", "test1")
@@ -183,6 +174,19 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         refreshTestIndex
         val result = search[JsObject](QueryStringQuery("one AND three"))
         result.hitsTotal === 1
+      }
+
+    }
+
+    "have a DisMaxQuery sub-class" >> {
+
+      "that finds documents" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two"))
+        index(id = "test2", doc = Json.obj("test" -> "three four"))
+        index(id = "test3", doc = Json.obj("test" -> "five six"))
+        refreshTestIndex
+        val result = search[JsObject](DisMaxQuery(queries = Seq(TermQuery("test", "one"), TermQuery("test", "three"))))
+        result.hitsTotal === 2
       }
 
     }

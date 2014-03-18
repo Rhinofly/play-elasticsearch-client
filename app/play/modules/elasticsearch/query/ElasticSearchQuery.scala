@@ -7,7 +7,10 @@ import play.api.libs.json._
  * plus extra properties accepted by the 'request body search' (http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-request-body.html).
  */
 
-case class ElasticSearchQuery(query: Query, properties: Seq[(String, JsValue)] = Seq.empty) {
+case class ElasticSearchQuery(
+    query: Query,
+    properties: Seq[(String, JsValue)] = Seq.empty
+  ) {
 
   /* Methods to add specific properties to a query. */
 

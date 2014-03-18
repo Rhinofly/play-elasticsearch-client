@@ -25,14 +25,6 @@ object Operator extends Enumeration {
   implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }
 
-object MatchType extends Enumeration {
-  val boolean = Value("boolean")
-  val phrase = Value("phrase")
-  val phrase_prefix = Value("phrase_prefix")
-  implicit val enumReads: Reads[Value] = EnumUtils.enumReads(MatchType)
-  implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
-}
-
 object Query {
   implicit def queryToElasticSearchQuery(query : Query): ElasticSearchQuery =
     ElasticSearchQuery(query)

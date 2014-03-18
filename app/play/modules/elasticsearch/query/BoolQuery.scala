@@ -26,16 +26,11 @@ case class BoolQuery(
 
   def toQueryDSL =
     Json.obj("bool" ->
-      JsObject(
-        subQueries("should", shoulds) ++ subQueries("must", musts) ++ subQueries("must_not", mustNots) :+
-        ("minimum_should_match" -> toJsonIfValid[String](minimumShouldMatch, { _ != "" }))
+      toJsonObject(
+        "should" -> toJsonIfValid(shoulds, {queries: Seq[Query] => !queries.isEmpty}, {queries: Seq[Query] => queries.map(_.toQueryDSL)}),
+        "must" -> toJsonIfValid(musts, {queries: Seq[Query] => !queries.isEmpty}, {queries: Seq[Query] => queries.map(_.toQueryDSL)}),
+        "must_not" -> toJsonIfValid(mustNots, {queries: Seq[Query] => !queries.isEmpty}, {queries: Seq[Query] => queries.map(_.toQueryDSL)}),
+        "minimum_should_match" -> toJsonIfValid[String](minimumShouldMatch, { _ != "" })
       ))
-
-  private def subQueries(name: String, queries: Seq[Query]): Seq[(String, JsValue)] =
-    queries match {
-      case Nil => Nil
-      case List(query) => Seq(name -> query.toQueryDSL)
-      case queries => Seq(name -> JsArray(queries.map { query => query.toQueryDSL }))
-    }
 
 }
