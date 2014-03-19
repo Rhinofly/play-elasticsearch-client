@@ -86,6 +86,7 @@ object Mapping {
         case BinaryMapping.typeName => BinaryMapping.fromJson(field)
         case MultiFieldMapping.typeName => MultiFieldMapping.fromJson(field)
         case GeoPointMapping.typeName => GeoPointMapping.fromJson(field)
+        case NestedMapping.typeName => NestedMapping.fromJson(field)
       }
     }
   }

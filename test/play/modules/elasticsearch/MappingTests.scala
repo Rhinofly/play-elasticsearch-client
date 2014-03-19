@@ -163,6 +163,16 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
         mappingTest(mapping, json)
       }
 
+      "have a NestedMapping sub-class" in {
+        val mapping = NestedMapping("computer", properties = Set(
+            StringMapping("make"), StringMapping("model")
+          ))
+        val json = Json.obj("computer" -> Json.obj("type" -> "nested", "properties" -> Json.obj(
+            "make" -> Json.obj("type" -> "string"), "model" -> Json.obj("type" -> "string")
+        )))
+        mappingTest(mapping, json)
+      }
+
     } // "Mapping should"
 
     "index should" >> {
