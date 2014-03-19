@@ -7,6 +7,7 @@ import play.modules.elasticsearch.{ElasticSearchException, JsonUtils}
 /**
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping-object-type.html
  */
+/*TODO The path property is deprecated in 1.0.0. */
 case class ObjectMapping(
     field: String,
     properties: Set[NestableMapping],

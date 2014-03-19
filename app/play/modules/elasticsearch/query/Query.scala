@@ -19,8 +19,7 @@ trait Query {
 }
 
 object Operator extends Enumeration {
-  val or = Value("or")
-  val and = Value("and")
+  val or, and = Value
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(Operator)
   implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }

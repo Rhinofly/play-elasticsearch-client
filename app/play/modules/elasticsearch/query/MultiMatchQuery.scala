@@ -35,9 +35,7 @@ case class MultiMatchQuery(
  * For the `type` option, this will change in 1.1.0.
  */
 object MultiMatchType extends Enumeration {
-  val boolean = Value("boolean")
-  val phrase = Value("phrase")
-  val phrase_prefix = Value("phrase_prefix")
+  val boolean, phrase, phrase_prefix = Value
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(MultiMatchType)
   implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }
