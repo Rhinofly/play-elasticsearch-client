@@ -102,8 +102,8 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         refreshTestIndex
         val result1 = search[JsObject](MultiMatchQuery(fields = Seq("keywords", "description"), value = "play"))
         val result2 = search[JsObject](MultiMatchQuery(fields = Seq("keywords", "description"), value = "play node.js", operator = Operator.and))
-        hasHitIds(result1, Set("test1", "test3")) and
-          hasHitIds(result2, Set("test3"))
+        result1.hits.map(_.id) must containTheSameElementsAs(Seq("test1", "test3"))
+        result2.hits.map(_.id) must containTheSameElementsAs(Seq("test3"))
       }
 
     }
@@ -191,9 +191,171 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
 
     }
 
-  }
+    "have a BoostingQuery sub-class" >> {
 
-  def hasHitIds[T](result: SearchResult[T], ids: Set[Identifier]): Boolean =
-    result.hits.map(_.id).toSet === ids
+      "that finds documents" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two"))
+        index(id = "test2", doc = Json.obj("test" -> "two three"))
+        index(id = "test3", doc = Json.obj("test" -> "three four"))
+        refreshTestIndex
+        val result = search[JsObject](BoostingQuery(positive = QueryStringQuery("one OR three"), negative = TermQuery("test", "three"), negativeBoost = 0.5))
+        (result.hits(0).source \ "test").as[String] === "one two"
+      }
+
+    }
+
+    "have a FuzzyLikeThisQuery sub-class" >> {
+
+      "that does not find documents when searching for an exact match" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two"))
+        index(id = "test2", doc = Json.obj("test" -> "two three"))
+        index(id = "test3", doc = Json.obj("test" -> "three four"))
+        refreshTestIndex
+        val resultExact = search[JsObject](FuzzyLikeThisQuery(fields = Seq("test"), likeText = "tree", fuzziness = "0"))
+        resultExact.hitsTotal === 0
+      }
+
+      "that finds documents with a slightly different search term when searching for a fuzzy match" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two"))
+        index(id = "test2", doc = Json.obj("test" -> "two three"))
+        index(id = "test3", doc = Json.obj("test" -> "three four"))
+        refreshTestIndex
+        val resultFuzzy = search[JsObject](FuzzyLikeThisQuery(fields = Seq("test"), likeText = "tree", fuzziness = "0.5"))
+        resultFuzzy.hitsTotal === 2
+      }
+
+      "accepts all parameters" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "Fuzzy like this query find documents that are like provided text by running it against one or more fields."))
+        index(id = "test2", doc = Json.obj("test" -> "Fuzzifies ALL terms provided as strings and then picks the best n differentiating terms. In effect this mixes the behaviour of FuzzyQuery and MoreLikeThis but with special consideration of fuzzy scoring factors."))
+        index(id = "test3", doc = Json.obj("test" -> "This generally produces good results for queries where users may provide details in a number of fields and have no knowledge of boolean query syntax and also want a degree of fuzzy matching and a fast query."))
+        refreshTestIndex
+        val resultFuzzy = search[JsObject](FuzzyLikeThisQuery(
+          fields = Seq("test"), likeText = "furry",
+          ignoreTf = true, maxQueryTerms = 10,
+          fuzziness = "0.2", prefixLength = 2, boost = 2.0, analyzer = "simple"
+        ))
+        resultFuzzy.hitsTotal === 3
+      }
+
+    }
+
+    " have a FuzzyLikeThisFieldQuery sub-class" >> {
+
+      "that does not find documents when searching for an exact match" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two"))
+        index(id = "test2", doc = Json.obj("test" -> "two three"))
+        index(id = "test3", doc = Json.obj("test" -> "three four"))
+        refreshTestIndex
+        val resultExact = search[JsObject](FuzzyLikeThisFieldQuery(field = "test", likeText = "tree", fuzziness = "0"))
+        resultExact.hitsTotal === 0
+      }
+
+      "that finds documents with a slightly different search term when searching for a fuzzy match" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two"))
+        index(id = "test2", doc = Json.obj("test" -> "two three"))
+        index(id = "test3", doc = Json.obj("test" -> "three four"))
+        refreshTestIndex
+        val resultFuzzy = search[JsObject](FuzzyLikeThisFieldQuery(field = "test", likeText = "tree", fuzziness = "0.5"))
+        resultFuzzy.hitsTotal === 2
+      }
+
+      "accepts all parameters" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "Fuzzy like this query find documents that are like provided text by running it against one or more fields."))
+        index(id = "test2", doc = Json.obj("test" -> "Fuzzifies ALL terms provided as strings and then picks the best n differentiating terms. In effect this mixes the behaviour of FuzzyQuery and MoreLikeThis but with special consideration of fuzzy scoring factors."))
+        index(id = "test3", doc = Json.obj("test" -> "This generally produces good results for queries where users may provide details in a number of fields and have no knowledge of boolean query syntax and also want a degree of fuzzy matching and a fast query."))
+        refreshTestIndex
+        val resultFuzzy = search[JsObject](FuzzyLikeThisFieldQuery(
+          field = "test", likeText = "furry",
+          ignoreTf = true, maxQueryTerms = 10,
+          fuzziness = "0.2", prefixLength = 2, boost = 2.0, analyzer = "simple"
+        ))
+        resultFuzzy.hitsTotal === 3
+      }
+
+    }
+
+    " have a FuzzyQuery sub-class" >> {
+
+      "that does not find documents when searching for an exact match" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "The fuzzy query uses similarity based on Levenshtein edit distance for string fields, and a +/- margin on numeric and date fields."))
+        index(id = "test2", doc = Json.obj("test" -> "The fuzzy query generates all possible matching terms that are within the maximum edit distance specified in fuzziness."))
+        index(id = "test3", doc = Json.obj("test" -> "It then checks the term dictionary to find out which of those generated terms actually exist in the index."))
+        refreshTestIndex
+        val resultExact = search[JsObject](FuzzyQuery(field = "test", value = "funny", fuzziness = "0"))
+        resultExact.hitsTotal === 0
+      }
+
+      "that finds documents with a slightly different search term when searching for a fuzzy match" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "The fuzzy query uses similarity based on Levenshtein edit distance for string fields, and a +/- margin on numeric and date fields."))
+        index(id = "test2", doc = Json.obj("test" -> "The fuzzy query generates all possible matching terms that are within the maximum edit distance specified in fuzziness."))
+        index(id = "test3", doc = Json.obj("test" -> "It then checks the term dictionary to find out which of those generated terms actually exist in the index."))
+        refreshTestIndex
+        val resultFuzzy = search[JsObject](FuzzyQuery(field = "test", value = "funniness"))
+        resultFuzzy.hits.map(_.id) must containTheSameElementsAs(Seq("test2"))
+      }
+
+    }
+
+    "have a IdsQuery sub-class" >> {
+
+      "that finds documents" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two"))
+        index(id = "test2", doc = Json.obj("test" -> "two three"))
+        index(id = "test3", doc = Json.obj("test" -> "three four"))
+        refreshTestIndex
+        val result = search[JsObject](IdsQuery(values = Seq("test2", "test3")))
+        result.hits.map(_.id) must containTheSameElementsAs(Seq("test2", "test3"))
+      }
+
+    }
+
+    "have a MoreLikeThisQuery sub-class" >> {
+
+      "that finds documents with a text like this" in new WithTestIndex {
+        val likeThis = "Do you like this short piece of text?"
+        index(id = "test1", doc = Json.obj("test" -> "This is a short piece of text which you may like."))
+        index(id = "test2", doc = Json.obj("test" -> "However, this has nothing to do with it."))
+        index(id = "test3", doc = Json.obj("test" -> "This piece of text is more like it, don't you think?"))
+        refreshTestIndex
+        val result = search[JsObject](MoreLikeThisQuery(fields = Seq("test"), likeText = likeThis, percentTermsToMatch = 0.5, minTermFreq = 1, minDocFreq = 1))
+        result.hits.map(_.id) must containTheSameElementsAs(Seq("test1", "test3"))
+      }
+
+    }
+
+    "have a MoreLikeThisFieldQuery sub-class" >> {
+
+      "that finds documents with a text like this" in new WithTestIndex {
+        val likeThis = "Do you like this short piece of text?"
+        index(id = "test1", doc = Json.obj("test" -> "This is a short piece of text which you may like."))
+        index(id = "test2", doc = Json.obj("test" -> "However, this has nothing to do with it."))
+        index(id = "test3", doc = Json.obj("test" -> "This piece of text is more like it, don't you think?"))
+        refreshTestIndex
+        val result = search[JsObject](MoreLikeThisFieldQuery(field = "test", likeText = likeThis, percentTermsToMatch = 0.5, minTermFreq = 1, minDocFreq = 1))
+        result.hits.map(_.id) must containTheSameElementsAs(Seq("test1", "test3"))
+      }
+
+    }
+
+    "have a RangeQuery sub-class" >> {
+
+      "that finds documents using a string range" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("text" -> "all before cee"))
+        index(id = "test2", doc = Json.obj("text" -> "some words after dee"))
+        index(id = "test3", doc = Json.obj("text" -> "only stuff past o up to u"))
+        refreshTestIndex
+        val result1 = search[JsObject](RangeQuery("text", from = "n", to = "v"))
+        result1.hits.map(_.id) must containTheSameElementsAs(Seq("test2", "test3"))
+        val result2 = search[JsObject](RangeQuery("text", from = "d", to = "o"))
+        result2.hits.map(_.id) must containTheSameElementsAs(Seq("test2", "test3"))
+        val result3 = search[JsObject](RangeQuery("text", from = "d", to = "o", includeUpper = false))
+        result3.hits.map(_.id) must containTheSameElementsAs(Seq("test2"))
+        val result4 = search[JsObject](RangeQuery("text", from = "cee", to = "zebras", includeLower = false))
+        result4.hits.map(_.id) must containTheSameElementsAs(Seq("test2", "test3"))
+      }
+
+    }
+
+  }
 
 }

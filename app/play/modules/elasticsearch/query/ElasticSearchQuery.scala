@@ -3,7 +3,7 @@ package play.modules.elasticsearch.query
 import play.api.libs.json._
 
 /**
- * A query as one of the subclasses of Query (http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-request-query.html),
+ * An ElasticSearchQuery has one of the subclasses of Query (http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-request-query.html),
  * plus extra properties accepted by the 'request body search' (http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-request-body.html).
  */
 

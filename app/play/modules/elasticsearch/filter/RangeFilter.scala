@@ -6,8 +6,6 @@ import play.modules.elasticsearch.JsonUtils
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-range-filter.html
  *     http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-numeric-range-filter.html
- * This version supports the execution option, although that is not supported in the current stable version of ElasticSearch yet.
- * The execution option is translated to work with versions of ElasticSearch before 0.90.8.
  */
 case class RangeFilter[BoundType : Writes](
   field: String,

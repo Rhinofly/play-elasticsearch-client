@@ -17,10 +17,15 @@ class Client(elasticSearchUrl: String) {
 
   import ResponseHandlers._
 
+  /* The HTTP requests must have a timeout. Otherwise, `Future`s in Play may hang around forever.
+   * We set the timeout to 30 seconds.
+   */
+  val timeout = 30000
+
   val normalizedUrl =
     elasticSearchUrl + (if (elasticSearchUrl.last == '/') "" else '/')
 
-  def url(path: String = "") = WS.url(normalizedUrl + path)
+  def url(path: String = "") = WS.url(normalizedUrl + path).withTimeout(timeout)
 
   def health: Future[JsObject] = health()
 
