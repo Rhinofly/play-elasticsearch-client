@@ -81,8 +81,7 @@ object Analysis extends JsonUtils {
       lazy val component = js.as[JsObject] + ("name" -> JsString(name))
       val typeName = (js \ "type") match {
         case JsString(typeName) => typeName
-        case JsUndefined(_) if acceptUndefined => ""
-        case JsUndefined(error) => error
+        case JsUndefined() if acceptUndefined => ""
         case _ => "Error: cannot read analysis component fields from "+json
       }
       (component, typeName)
