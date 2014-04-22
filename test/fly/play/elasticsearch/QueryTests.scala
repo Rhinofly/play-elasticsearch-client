@@ -164,6 +164,42 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         result3.hitsTotal === 0
       }
 
+      "that supports the AndQuery constructor" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two three"))
+        index(id = "test2", doc = Json.obj("test" -> "one two"))
+        refreshTestIndex
+        val result0 = search[JsObject](AndQuery(TermQuery("test", "one"), TermQuery("test", "four")))
+        result0.hitsTotal === 0
+        val result1 = search[JsObject](AndQuery(TermQuery("test", "one"), TermQuery("test", "three")))
+        result1.hitsTotal === 1
+        val result2 = search[JsObject](AndQuery(TermQuery("test", "one"), TermQuery("test", "two")))
+        result2.hitsTotal === 2
+      }
+
+      "that supports the OrQuery constructor" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two three"))
+        index(id = "test2", doc = Json.obj("test" -> "one two"))
+        refreshTestIndex
+        val result0 = search[JsObject](OrQuery(TermQuery("test", "five"), TermQuery("test", "four")))
+        result0.hitsTotal === 0
+        val result1 = search[JsObject](OrQuery(TermQuery("test", "five"), TermQuery("test", "three")))
+        result1.hitsTotal === 1
+        val result2 = search[JsObject](OrQuery(TermQuery("test", "five"), TermQuery("test", "two")))
+        result2.hitsTotal === 2
+      }
+
+      "that supports the NorQuery constructor" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("test" -> "one two three"))
+        index(id = "test2", doc = Json.obj("test" -> "one two"))
+        refreshTestIndex
+        val result0 = search[JsObject](NorQuery(TermQuery("test", "one"), TermQuery("test", "two")))
+        result0.hitsTotal === 0
+        val result1 = search[JsObject](NorQuery(TermQuery("test", "three"), TermQuery("test", "four")))
+        result1.hitsTotal === 1
+        val result2 = search[JsObject](NorQuery(TermQuery("test", "five"), TermQuery("test", "six")))
+        result2.hitsTotal === 2
+      }
+
     }
 
     "have a QueryStringQuery sub-class" >> {

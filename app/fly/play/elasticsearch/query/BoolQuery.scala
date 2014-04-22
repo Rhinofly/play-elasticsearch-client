@@ -34,3 +34,23 @@ case class BoolQuery(
       ))
 
 }
+
+/*
+ * Simplified constructors for and, or, not.
+ */
+
+object AndQuery {
+  def apply(queries: Query*) =
+    BoolQuery(musts = queries)
+}
+
+object OrQuery {
+  def apply(queries: Query*) =
+    BoolQuery(shoulds = queries, minimumShouldMatch = "1")
+}
+
+/* Logically, this is a NOR-operation. NAND is no supported at the moment. */
+object NorQuery {
+  def apply(queries: Query*) =
+    BoolQuery(mustNots = queries)
+}
