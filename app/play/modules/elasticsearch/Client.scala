@@ -2,7 +2,7 @@ package play.modules.elasticsearch
 
 import ResponseHandlers._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json.{JsNull, JsObject, Json, JsValue}
 import play.api.libs.json.{Reads, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.libs.ws.{Response, WS}
@@ -25,7 +25,7 @@ class Client(elasticSearchUrl: String) {
   val normalizedUrl =
     elasticSearchUrl + (if (elasticSearchUrl.last == '/') "" else '/')
 
-  def url(path: String = "") = WS.url(normalizedUrl + path).withTimeout(timeout)
+  def url(path: String = "") = WS.url(normalizedUrl + path).withRequestTimeout(timeout)
 
   def health: Future[JsObject] = health()
 
@@ -85,6 +85,16 @@ class Client(elasticSearchUrl: String) {
     /* Retrieve mappings for all types. */
     def mappings: Future[Seq[Mapping]] =
       url("_mapping").get.map(convertJsonOrError(Mapping.mappingsFromJson))
+
+    /* Perform analysis on a text. */
+
+    def analyze(text: String): Future[Seq[AnalysisToken]] =
+      url("_analyze").withQueryString("text" -> text)
+        .get().map(convertJsonOrError[Seq[AnalysisToken]]{json: JsValue => (json \ "tokens").as[Seq[AnalysisToken]]})
+
+    def analyze(text: String, analyzer: String) : Future[Seq[AnalysisToken]] =
+      url("_analyze").withQueryString("text" -> text, "analyzer" -> analyzer)
+        .get().map(convertJsonOrError[Seq[AnalysisToken]]{json: JsValue => (json \ "tokens").as[Seq[AnalysisToken]]})
 
     /* Refresh will commit the index and make all documents findable. */
     def refresh(): Future[Unit] =

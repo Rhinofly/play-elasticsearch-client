@@ -1,10 +1,18 @@
 package play.modules.elasticsearch
 
-import play.api.libs.json.{JsObject, JsValue, Reads}
+import play.api.libs.json.{JsObject, JsValue, Reads, __}
+import play.api.libs.functional.syntax._
 import play.api.libs.ws.Response
 import scala.annotation.implicitNotFound
 
 object ResponseHandlers {
+
+  private def sourceReader[T: Reads] = (__ \ '_source).read[T]
+  private def fieldsReader[T: Reads] = (__ \ 'fields).read[T]
+  def sourceOrFieldsReader[T: Reads] = sourceReader[T] or fieldsReader[T]
+  implicit def versionAndDocumentReader[T: Reads]: Reads[(Version, T)] = {
+    (Version.reader and sourceOrFieldsReader[T]).tupled
+  }
 
   val unitOrError: Response => Unit = convertOrError(_ => ())
 

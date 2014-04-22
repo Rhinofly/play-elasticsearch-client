@@ -35,9 +35,11 @@ trait ClientUtils { self: Specification with NoTimeConversions =>
 
   def testClientHealth = awaitResult(testClient.health)
   def createTestIndex = awaitResult(testIndex.create(Settings()))
+  def createTestIndex(settings: Settings) = awaitResult(testIndex.create(settings))
   def deleteTestIndex = awaitResult(testIndex.delete)
   def existsTestIndex = awaitResult(testIndex.exists)
   def refreshTestIndex = awaitResult(testIndex.refresh)
+  def analyze(text: String, analyzer: String) = awaitResult(testIndex.analyze(text, analyzer))
 
   def index[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.indexV(id = id, doc = doc, parameters: _*))
   def index[T: Writes](doc: T, parameters: Parameter*) = awaitResult(testType.indexV(doc = doc, parameters: _*))

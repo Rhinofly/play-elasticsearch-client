@@ -17,5 +17,7 @@ object ApplicationBuild extends Build {
   val main = play.Project(appName, appVersion, appDependencies).settings(
     organization := "nl.rhinofly",
     publishTo <<= version(rhinoflyRepo),
-    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")).settings(scalacOptions += "-feature")
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"))
+    .settings(scalacOptions += "-feature")
+    .settings(ScoverageSbtPlugin.instrumentSettings:_*)
 }

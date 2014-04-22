@@ -1,7 +1,7 @@
 package play.modules.elasticsearch
 
-import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import play.api.libs.json.Reads._
 
 /**
@@ -46,6 +46,7 @@ object SearchResult {
       (__ \ "hits" \ "max_score").readNullable[Double] and
       (__ \ "hits" \ "hits").read( list[ResultDocument[T]] )
     )(SearchResult.apply[T] _)
+
 }
 
 object ResultDocument {

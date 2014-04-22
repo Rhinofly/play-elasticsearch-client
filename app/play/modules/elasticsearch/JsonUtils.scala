@@ -133,7 +133,7 @@ object EnumUtils {
 
   def enumWritesWithTransform[E <: Enumeration](xform: String => String): Writes[E#Value] =
     new Writes[E#Value] {
-      def writes(v: E#Value): JsValue = {println("***> "+xform(v.toString));JsString(xform(v.toString))}
+      def writes(v: E#Value): JsValue = JsString(xform(v.toString))
     }
 
   def enumFormat[E <: Enumeration](enum: E): Format[E#Value] = {

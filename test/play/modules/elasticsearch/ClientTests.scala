@@ -96,6 +96,21 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
         result === ()
       }
 
+      "have an analyze method that uses the default analyzer" in {
+        createTestIndex
+        val result = awaitResult(testIndex.analyze("to be or not to be, that is the question"))
+        deleteTestIndex
+        result.length !== 0
+      }
+
+      "have an analyze method that uses a specific analyzer" in {
+        createTestIndex
+        val result = analyze("to be or not to be, that is the question", "english")
+        deleteTestIndex
+        result.length == 1
+        result(0).token === "question"
+      }
+
       "have an apply method to access a type" in {
         testIndex("test") must beAnInstanceOf[Client#Index#Type]
       }

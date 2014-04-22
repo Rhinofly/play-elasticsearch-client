@@ -240,6 +240,8 @@ object FilterTests extends Specification with NoTimeConversions with ClientUtils
 
     }
 
+    // NestedFilter is tested in NestedTests.
+
   }
 
   def hasHitIds[T](result: SearchResult[T], ids: Set[Identifier]): Boolean =
