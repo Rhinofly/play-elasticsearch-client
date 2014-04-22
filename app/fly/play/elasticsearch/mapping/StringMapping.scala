@@ -1,7 +1,7 @@
 package fly.play.elasticsearch.mapping
 
 import play.api.libs.json._
-import fly.play.elasticsearch.JsonUtils
+import fly.play.elasticsearch.utils.JsonUtils
 
 /**
  * http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping-core-types.html#string

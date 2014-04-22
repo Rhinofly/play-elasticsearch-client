@@ -6,7 +6,8 @@ import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
 import play.api.libs.json.{Format, JsObject, Json, JsPath, JsSuccess, Reads, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import fly.play.elasticsearch.{ClientUtils, JsonUtils, Settings}
+import fly.play.elasticsearch.{ClientUtils, Settings}
+import fly.play.elasticsearch.utils.JsonUtils
 import fly.play.elasticsearch.mapping.{IndexType, Mapping, NestableMapping, ObjectMapping, StoreType, StringMapping}
 import fly.play.elasticsearch.query.{MatchQuery, MultiMatchQuery, TermQuery}
 

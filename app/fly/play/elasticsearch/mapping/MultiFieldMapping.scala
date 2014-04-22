@@ -1,9 +1,10 @@
 package fly.play.elasticsearch.mapping
 
+import fly.play.elasticsearch.ElasticSearchException
+import fly.play.elasticsearch.utils.{EnumUtils, JsonUtils}
 import play.api.libs.json.{JsObject, JsString, JsValue, Json}
 import play.api.libs.json.{Reads, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import fly.play.elasticsearch.{ElasticSearchException, EnumUtils, JsonUtils}
 
 /**
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping-multi-field-type.html
@@ -38,7 +39,6 @@ object MultiFieldMapping extends MappingType {
   }
 
   object PathType extends Enumeration {
-    import fly.play.elasticsearch.EnumUtils
     val full, just_name = Value
     val default = full
     implicit val enumReads: Reads[Value] = EnumUtils.enumReads(PathType)

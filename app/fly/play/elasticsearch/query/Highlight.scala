@@ -1,11 +1,10 @@
 package fly.play.elasticsearch.query
 
-import play.api.libs.json.{JsArray, JsError, JsObject, JsSuccess, JsValue, Json}
+import fly.play.elasticsearch.utils.{EnumUtils, JsonUtils}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.libs.json.{Reads, Writes}
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsNull
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import fly.play.elasticsearch.{EnumUtils, JsonUtils}
+import scala.annotation.implicitNotFound
 
 /**
  * Highlighting.

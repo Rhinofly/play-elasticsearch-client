@@ -2,7 +2,7 @@ package fly.play.elasticsearch.analysis
 
 import play.api.libs.functional.syntax.{functionalCanBuildApplicative, toFunctionalBuilderOps, unlift}
 import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsUndefined, JsValue, Reads, Writes, __}
-import fly.play.elasticsearch.JsonUtils
+import fly.play.elasticsearch.utils.JsonUtils
 import play.api.libs.json.JsUndefined
 import scala.util.Try
 import play.api.libs.json.JsSuccess

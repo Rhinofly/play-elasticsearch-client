@@ -2,7 +2,8 @@ package fly.play.elasticsearch.mapping
 
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import fly.play.elasticsearch.{ElasticSearchException, JsonUtils}
+import fly.play.elasticsearch.{ElasticSearchException}
+import fly.play.elasticsearch.utils.JsonUtils
 
 /**
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping-core-types.html#fielddata-filters

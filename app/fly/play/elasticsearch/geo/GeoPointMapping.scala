@@ -2,7 +2,7 @@ package fly.play.elasticsearch.geo
 
 import play.api.libs.json.{JsObject, JsString, JsValue, Json}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import fly.play.elasticsearch.JsonUtils
+import fly.play.elasticsearch.utils.JsonUtils
 import fly.play.elasticsearch.mapping.{MappingType, NestableMapping}
 
 /**

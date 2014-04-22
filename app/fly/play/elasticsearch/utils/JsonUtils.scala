@@ -1,4 +1,4 @@
-package fly.play.elasticsearch
+package fly.play.elasticsearch.utils
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._

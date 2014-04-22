@@ -1,8 +1,8 @@
 package fly.play.elasticsearch.query
 
+import fly.play.elasticsearch.utils.{EnumUtils, JsonUtils}
 import play.api.libs.json.{JsString, Json, Reads, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import fly.play.elasticsearch.{EnumUtils, JsonUtils}
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-nested-query.html

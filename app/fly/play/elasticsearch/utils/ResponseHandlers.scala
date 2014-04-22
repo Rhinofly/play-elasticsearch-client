@@ -1,9 +1,9 @@
-package fly.play.elasticsearch
+package fly.play.elasticsearch.utils
 
+import fly.play.elasticsearch._
 import play.api.libs.json.{JsObject, JsValue, Reads, __}
 import play.api.libs.functional.syntax._
 import play.api.libs.ws.Response
-import scala.annotation.implicitNotFound
 
 object ResponseHandlers {
 

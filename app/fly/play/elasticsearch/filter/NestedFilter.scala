@@ -1,7 +1,7 @@
 package fly.play.elasticsearch.filter
 
 import play.api.libs.json.{Json, JsString}
-import fly.play.elasticsearch.JsonUtils
+import fly.play.elasticsearch.utils.JsonUtils
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-nested-filter.html

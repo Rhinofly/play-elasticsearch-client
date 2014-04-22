@@ -1,7 +1,7 @@
 package fly.play.elasticsearch.query
 
 import play.api.libs.json._
-import fly.play.elasticsearch.JsonUtils
+import fly.play.elasticsearch.utils.JsonUtils
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-query-string-query.html

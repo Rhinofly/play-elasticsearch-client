@@ -1,9 +1,7 @@
 package fly.play.elasticsearch.filter
 
-import play.api.libs.json.JsValue
-import play.api.libs.json.Reads
-import play.api.libs.json.Writes
-import fly.play.elasticsearch.EnumUtils
+import fly.play.elasticsearch.utils.EnumUtils
+import play.api.libs.json.{JsValue, Reads, Writes}
 
 /**
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-filters.html

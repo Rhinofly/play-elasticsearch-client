@@ -1,9 +1,12 @@
 package fly.play.elasticsearch.mapping
 
-import play.api.libs.json._
 import fly.play.elasticsearch.ElasticSearchException
-import fly.play.elasticsearch.EnumUtils
 import fly.play.elasticsearch.geo.GeoPointMapping
+import fly.play.elasticsearch.utils.EnumUtils
+import play.api.libs.json.{JsObject, JsSuccess, JsValue, Json}
+import play.api.libs.json.{Reads, Writes}
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import scala.annotation.implicitNotFound
 
 /**
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping.html

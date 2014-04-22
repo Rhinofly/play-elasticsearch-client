@@ -1,7 +1,7 @@
 package fly.play.elasticsearch.query
 
+import fly.play.elasticsearch.utils.{EnumUtils, JsonUtils}
 import play.api.libs.json.{JsValue, Reads, Writes}
-import fly.play.elasticsearch.EnumUtils
 import scala.language.implicitConversions
 
 /**

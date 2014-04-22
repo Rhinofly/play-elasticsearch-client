@@ -1,8 +1,7 @@
 package fly.play.elasticsearch.query
 
+import fly.play.elasticsearch.utils.{EnumUtils, JsonUtils}
 import play.api.libs.json._
-import fly.play.elasticsearch.JsonUtils
-import fly.play.elasticsearch.EnumUtils
 
 /*
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-multi-match-query.html

@@ -1,7 +1,7 @@
 package fly.play.elasticsearch.query
 
+import fly.play.elasticsearch.utils.{EnumUtils, JsonUtils}
 import play.api.libs.json.{JsError, JsObject, Json, JsString, JsSuccess, JsValue, Reads, Writes}
-import fly.play.elasticsearch.{EnumUtils, JsonUtils}
 import scala.annotation.implicitNotFound
 
 /**

@@ -1,21 +1,19 @@
 package fly.play.elasticsearch
 
-import ResponseHandlers._
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json.{JsNull, JsObject, Json, JsValue}
-import play.api.libs.json.{Reads, Writes}
-import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.api.libs.ws.{Response, WS}
-import play.api.libs.ws.Implicits._
+import fly.play.elasticsearch.analysis.AnalyzedToken
 import fly.play.elasticsearch.mapping.Mapping
 import fly.play.elasticsearch.query.ElasticSearchQuery
+import fly.play.elasticsearch.utils.ResponseHandlers._
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
+import play.api.libs.json.{JsNull, JsObject, JsValue, Json, Reads, Writes}
+import play.api.libs.json.Json.toJsFieldJsValueWrapper
+import play.api.libs.ws.{Response, WS}
+import play.api.libs.ws.Implicits.WSRequestHolderOps
 import scala.concurrent.Future
 import scala.language.existentials
 import scala.util.{Failure, Success, Try}
 
 class Client(elasticSearchUrl: String) {
-
-  import ResponseHandlers._
 
   /* The HTTP requests must have a timeout. Otherwise, `Future`s in Play may hang around forever.
    * We set the timeout to 30 seconds.
@@ -88,13 +86,13 @@ class Client(elasticSearchUrl: String) {
 
     /* Perform analysis on a text. */
 
-    def analyze(text: String): Future[Seq[AnalysisToken]] =
+    def analyze(text: String): Future[Seq[AnalyzedToken]] =
       url("_analyze").withQueryString("text" -> text)
-        .get().map(convertJsonOrError[Seq[AnalysisToken]]{json: JsValue => (json \ "tokens").as[Seq[AnalysisToken]]})
+        .get().map(convertJsonOrError[Seq[AnalyzedToken]]{json: JsValue => (json \ "tokens").as[Seq[AnalyzedToken]]})
 
-    def analyze(text: String, analyzer: String) : Future[Seq[AnalysisToken]] =
+    def analyze(text: String, analyzer: String) : Future[Seq[AnalyzedToken]] =
       url("_analyze").withQueryString("text" -> text, "analyzer" -> analyzer)
-        .get().map(convertJsonOrError[Seq[AnalysisToken]]{json: JsValue => (json \ "tokens").as[Seq[AnalysisToken]]})
+        .get().map(convertJsonOrError[Seq[AnalyzedToken]]{json: JsValue => (json \ "tokens").as[Seq[AnalyzedToken]]})
 
     /* Refresh will commit the index and make all documents findable. */
     def refresh(): Future[Unit] =

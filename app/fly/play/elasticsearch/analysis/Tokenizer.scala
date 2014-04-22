@@ -2,7 +2,7 @@ package fly.play.elasticsearch.analysis
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Format, JsError, JsObject, JsResult, JsString, JsUndefined, JsValue, Reads, Writes, __}
-import fly.play.elasticsearch.JsonUtils
+import fly.play.elasticsearch.utils.JsonUtils
 
 /**
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/analysis-tokenizers.html

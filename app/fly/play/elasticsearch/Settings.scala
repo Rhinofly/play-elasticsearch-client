@@ -7,6 +7,7 @@ import play.api.libs.functional.syntax._
 import play.api.data.validation.ValidationError
 import fly.play.elasticsearch.analysis._
 import fly.play.elasticsearch.mapping.Mapping
+import fly.play.elasticsearch.utils.JsonUtils
 
 /**
  * Settings for ES indices.

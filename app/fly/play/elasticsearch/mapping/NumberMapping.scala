@@ -1,7 +1,7 @@
 package fly.play.elasticsearch.mapping
 
+import fly.play.elasticsearch.utils.{EnumUtils, JsonUtils}
 import play.api.libs.json.{JsObject, JsValue, Json, Reads, Writes}
-import fly.play.elasticsearch.{EnumUtils, JsonUtils}
 
 /**
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/mapping-core-types.html#number
