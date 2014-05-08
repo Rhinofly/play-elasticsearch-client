@@ -16,6 +16,7 @@ import fly.play.elasticsearch.utils.JsonUtils
 case class Settings(
     nrOfShards: Int = 1,
     nrOfReplicas: Int = 0,
+    refreshInterval: Option[String] = None,
     analysis: Option[Analysis] = None
   ) {
 
@@ -50,6 +51,7 @@ object Settings extends JsonUtils {
   implicit lazy val settingsFormat: Format[Settings]  = (
     (__ \ "index.number_of_shards").format(intStringFormat) and
     (__ \ "index.number_of_replicas").format(intStringFormat) and
+    (__ \ "index.refresh_interval").formatNullable[String] and
     (__ \ "index.analysis").formatNullable[Analysis]
   )(Settings.apply, unlift(Settings.unapply))
 
