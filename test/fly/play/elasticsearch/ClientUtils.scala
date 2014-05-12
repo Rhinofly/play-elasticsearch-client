@@ -1,32 +1,26 @@
 package fly.play.elasticsearch
 
-import scala.concurrent.Await
-import scala.concurrent.Awaitable
-import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
-import scala.util.Failure
-
-import org.specs2.execute.AsResult
-import org.specs2.execute.Result
-import org.specs2.mutable.Around
-import org.specs2.mutable.Specification
+import com.ning.http.client.AsyncHttpClientConfig
+import fly.play.elasticsearch.query.ElasticSearchQuery
+import org.specs2.execute.{ AsResult, Result }
+import org.specs2.mutable.{ Around, Specification }
 import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
-
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json
+import play.api.libs.json.{ JsValue, Json }
+import play.api.libs.json.{ Reads, Writes, __ }
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.api.libs.json.Reads
-import play.api.libs.json.Writes
-import play.api.libs.json.__
-import fly.play.elasticsearch.query.ElasticSearchQuery
+import play.api.libs.ws.ning.NingWSClient
+import scala.concurrent.{ Await, Awaitable, Future }
+import scala.concurrent.duration.DurationInt
+import scala.util.Failure
 
 trait ClientUtils { self: Specification with NoTimeConversions =>
 
   val testUrl = "http://localhost:9200"
   val defaultTimeout = 5.seconds
 
-  val testClient = new Client(elasticSearchUrl = testUrl)
+  implicit val ningWSClient = new NingWSClient(new AsyncHttpClientConfig.Builder().build())
+  val testClient = new Client(elasticSearchUrl = testUrl)(ningWSClient)
   val testIndexName = "indexname"
   val testTypeName = "typename"
 

@@ -1,13 +1,11 @@
 package fly.play
 
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import play.api.libs.json.Reads
-import play.api.libs.ws.WS
+import play.api.libs.json.{JsValue, __}
+import play.api.libs.ws.WSRequestHolder
 
 package object elasticsearch {
 
-  type RequestHolder = WS.WSRequestHolder
+  type RequestHolder = WSRequestHolder
   type Version = Long
   type Identifier = String
   type Parameter = (String, String)
