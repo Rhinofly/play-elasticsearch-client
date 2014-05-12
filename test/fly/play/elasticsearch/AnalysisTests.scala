@@ -45,6 +45,7 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
         new WithTestIndexWithSimpleAnalysis(Analysis(Seq(WhitespaceAnalyzer("analyzer")))) {
       val result = analyze("to be or not to be", "analyzer")
       result must containTheSameElementsAs(Seq("to", "be", "or", "not", "to", "be"))
+      1 must_== 2
     }
 
     "have a StopAnalyzer class that skips stopwords" in
