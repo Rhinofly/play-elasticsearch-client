@@ -230,7 +230,7 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
     def around[T: AsResult](t: => T): Result = {
       if (existsTestIndex) deleteTestIndex else true
       awaitResult(testIndex.create(Settings(), Seq(testMapping)))
-      AsResult(t)
+      AsResult.effectively(t)
     }
   }
 

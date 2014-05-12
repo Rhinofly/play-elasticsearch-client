@@ -64,7 +64,7 @@ class NestedTests extends Specification with NoTimeConversions with ClientUtils 
       awaitResult(testIndex.create(Seq(mapping)))
       people map {p => index(doc = p)}
       refreshTestIndex
-      AsResult(t)
+      AsResult.effectively(t)
     }
   }
 
@@ -81,7 +81,7 @@ class NestedTests extends Specification with NoTimeConversions with ClientUtils 
       awaitResult(testIndex.create(Seq(mapping)))
       people map {p => index(doc = p)}
       refreshTestIndex
-      AsResult(t)
+      AsResult.effectively(t)
     }
   }
 

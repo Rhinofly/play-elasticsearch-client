@@ -82,7 +82,7 @@ object SettingsTests extends Specification with NoTimeConversions with ClientUti
       if (existsTestIndex) deleteTestIndex
         createTestIndexWithSettingsAndMapping
       try {
-        AsResult(t)
+        AsResult.effectively(t)
       } finally {
         deleteTestIndex
       }

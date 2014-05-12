@@ -18,7 +18,7 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
       if (existsTestIndex) deleteTestIndex
       awaitResult( testIndex.create(Settings(analysis = Some(analysis)), Seq(ObjectMapping(testTypeName, properties = Set(mapping)))) )
       try {
-        AsResult(t)
+        AsResult.effectively(t)
       }
       // Leave the testIndex for inspection.
     }
@@ -29,7 +29,7 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
       if (existsTestIndex) deleteTestIndex
       createTestIndex(Settings(analysis = Some(analysis)))
       try {
-        AsResult(t)
+        AsResult.effectively(t)
       }
       // Leave the testIndex for inspection.
     }

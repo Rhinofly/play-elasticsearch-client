@@ -113,7 +113,7 @@ object GeoTests extends Specification with NoTimeConversions with ClientUtils {
       if (existsTestIndex) deleteTestIndex
       createTestIndexWithMapping
       try {
-        AsResult(t)
+        AsResult.effectively(t)
         // Leave the index, so it can be inspected.
       }
     }

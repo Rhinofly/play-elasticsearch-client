@@ -293,7 +293,7 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
     def around[T: AsResult](t: => T): Result = {
       if (existsTestIndex) deleteTestIndex
       createTestIndexWithMapping
-      AsResult(t)
+      AsResult.effectively(t)
     }
   }
 
