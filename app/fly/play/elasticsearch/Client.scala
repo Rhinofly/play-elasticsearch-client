@@ -12,8 +12,9 @@ import play.api.libs.ws.Implicits.WSRequestHolderOps
 import scala.concurrent.Future
 import scala.language.existentials
 import scala.util.{Failure, Success, Try}
+import com.ning.http.client.Realm.AuthScheme
 
-class Client(elasticSearchUrl: String) {
+class Client(elasticSearchUrl: String, credentials: Option[(String, String, AuthScheme)] = None) {
 
   /* The HTTP requests must have a timeout. Otherwise, `Future`s in Play may hang around forever.
    * We set the timeout to 30 seconds.
@@ -23,7 +24,12 @@ class Client(elasticSearchUrl: String) {
   val normalizedUrl =
     elasticSearchUrl + (if (elasticSearchUrl.last == '/') "" else '/')
 
-  def url(path: String = "") = WS.url(normalizedUrl + path).withRequestTimeout(timeout)
+  def url(path: String = "") = {
+    val baseUrl = WS.url(normalizedUrl + path).withRequestTimeout(timeout)
+    credentials.map { case (username, password, scheme) =>
+      baseUrl.withAuth(username, password, scheme)
+    } getOrElse baseUrl
+  }
 
   def health: Future[JsObject] = health()
 
