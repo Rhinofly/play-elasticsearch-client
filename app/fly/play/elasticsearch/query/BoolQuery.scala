@@ -49,6 +49,11 @@ object OrQuery {
     BoolQuery(shoulds = queries, minimumShouldMatch = "1")
 }
 
+object NotQuery {
+  def apply(query: Query) =
+    BoolQuery(mustNots = Seq(query))
+}
+
 /* Logically, this is a NOR-operation. NAND is no supported at the moment. */
 object NorQuery {
   def apply(queries: Query*) =

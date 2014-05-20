@@ -1,8 +1,11 @@
 package fly.play.elasticsearch.query
 
-import play.api.libs.json.{JsString, Json}
+import play.api.libs.json.{Json, JsNumber, JsString, JsValue}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import fly.play.elasticsearch.utils.JsonUtils
+import scala.util.Try
+import play.api.libs.json.JsNumber
+import java.lang.Float
 
 /**
  * See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-fuzzy-query.html
@@ -11,7 +14,7 @@ import fly.play.elasticsearch.utils.JsonUtils
 case class FuzzyQuery(
   field: String,
   value: String,
-  fuzziness: String = FuzzyQuery.defaultFuzziness,
+  fuzziness: String = Fuzziness.defaultFuzziness,
   prefixLength: Int = FuzzyQuery.defaultPrefixLength,
   maxExpansions: Int = FuzzyQuery.defaultMaxExpansions,
   boost: Double = FuzzyQuery.defaultBoost
@@ -32,8 +35,16 @@ case class FuzzyQuery(
 }
 
 object FuzzyQuery {
-  val defaultFuzziness = "AUTO"
   val defaultPrefixLength = 0
   val defaultMaxExpansions = 0
   val defaultBoost = 1.0
+}
+
+object Fuzziness {
+  def toJson(fuzziness: String): JsValue = (
+      Try(JsNumber(Integer.parseInt(fuzziness))) recoverWith
+      {case _ => Try(Json.toJson(java.lang.Double.parseDouble(fuzziness)))} recover
+      {case _ => JsString(fuzziness)}
+    ).get
+  val defaultFuzziness = "AUTO"
 }

@@ -30,3 +30,43 @@ case class RangeQuery[BoundType : Writes](
   }
 
 }
+
+case class RangeFromQuery[BoundType : Writes](
+  field: String,
+  from: BoundType,
+  includeLower: Boolean = true,
+  boost: Double = 1.0
+) extends Query with JsonUtils {
+
+  def toQueryDSL = {
+    Json.obj("range" ->
+      Json.obj(field ->
+        toJsonObject(
+          (if (includeLower) "gte" else "gt") -> Json.toJson(from),
+          "boost" -> toJsonIfNot(boost, 1.0)
+        )
+      )
+    )
+  }
+
+}
+
+case class RangeToQuery[BoundType : Writes](
+  field: String,
+  to: BoundType,
+  includeUpper: Boolean = true,
+  boost: Double = 1.0
+) extends Query with JsonUtils {
+
+  def toQueryDSL = {
+    Json.obj("range" ->
+      Json.obj(field ->
+        toJsonObject(
+          (if (includeUpper) "lte" else "lt") -> Json.toJson(to),
+          "boost" -> toJsonIfNot(boost, 1.0)
+        )
+      )
+    )
+  }
+
+}

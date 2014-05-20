@@ -75,7 +75,7 @@ trait ClientUtils { self: Specification with NoTimeConversions =>
     def around[T: AsResult](t: => T): Result = {
       if (existsTestIndex) deleteTestIndex else ()
       createTestIndex
-      AsResult(t)
+      AsResult.effectively(t)
       /* Leave the testIndex after the last test, for inspection via ES-head. */
     }
   }

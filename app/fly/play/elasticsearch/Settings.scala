@@ -17,7 +17,8 @@ case class Settings(
     nrOfShards: Int = 1,
     nrOfReplicas: Int = 0,
     refreshInterval: Option[String] = None,
-    analysis: Option[Analysis] = None
+    analysis: Option[Analysis] = None,
+    mapper: Option[Mapper] = None
   ) {
 
   def toJson =
@@ -52,7 +53,18 @@ object Settings extends JsonUtils {
     (__ \ "index.number_of_shards").format(intStringFormat) and
     (__ \ "index.number_of_replicas").format(intStringFormat) and
     (__ \ "index.refresh_interval").formatNullable[String] and
-    (__ \ "index.analysis").formatNullable[Analysis]
+    (__ \ "index.analysis").formatNullable[Analysis] and
+    (__ \ "index.mapper").formatNullable[Mapper]
   )(Settings.apply, unlift(Settings.unapply))
+
+}
+
+case class Mapper(
+  dynamic: Boolean = true
+)
+
+object Mapper {
+
+  implicit lazy val format: Format[Mapper] = Json.format[Mapper]
 
 }

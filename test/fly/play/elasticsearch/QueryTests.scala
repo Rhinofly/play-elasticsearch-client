@@ -282,7 +282,7 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         index(id = "test2", doc = Json.obj("test" -> "two three"))
         index(id = "test3", doc = Json.obj("test" -> "three four"))
         refreshTestIndex
-        val resultExact = search[JsObject](FuzzyLikeThisFieldQuery(field = "test", likeText = "tree", fuzziness = "0"))
+        val resultExact = search[JsObject](FuzzyLikeThisFieldQuery(field = "test", likeText = "tree", fuzziness = "1.0"))
         resultExact.hitsTotal === 0
       }
 
@@ -388,6 +388,63 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
         result3.hits.map(_.id) must containTheSameElementsAs(Seq("test2"))
         val result4 = search[JsObject](RangeQuery("text", from = "cee", to = "zebras", includeLower = false))
         result4.hits.map(_.id) must containTheSameElementsAs(Seq("test2", "test3"))
+      }
+
+      "that finds documents using a double range" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("data" -> -0.1))
+        index(id = "test2", doc = Json.obj("data" -> 3.14))
+        index(id = "test3", doc = Json.obj("data" -> 13.6))
+        refreshTestIndex
+        val result1 = search[JsObject](RangeQuery("data", from = 0.0, to = 20.0))
+        result1.hits.map(_.id) must containTheSameElementsAs(Seq("test2", "test3"))
+        val result2 = search[JsObject](RangeQuery("data", from = -1.0, to = 3.14, includeUpper = false))
+        result2.hits.map(_.id) must containTheSameElementsAs(Seq("test1"))
+      }
+
+    }
+
+    "have a RangeFromQuery sub-class" >> {
+
+      "that finds documents using a string range" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("text" -> "all before cee"))
+        index(id = "test2", doc = Json.obj("text" -> "some words after dee"))
+        index(id = "test3", doc = Json.obj("text" -> "only stuff past o up to u"))
+        refreshTestIndex
+        val result = search[JsObject](RangeFromQuery("text", from = "cee", includeLower = false))
+        result.hits.map(_.id) must containTheSameElementsAs(Seq("test2", "test3"))
+      }
+
+      "that finds documents using a double range" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("data" -> -0.1))
+        index(id = "test2", doc = Json.obj("data" -> 3.14))
+        index(id = "test3", doc = Json.obj("data" -> 13.6))
+        refreshTestIndex
+        val result1 = search[JsObject](RangeFromQuery("data", from = 0.0))
+        result1.hits.map(_.id) must containTheSameElementsAs(Seq("test2", "test3"))
+     }
+
+    }
+
+    "have a RangeToQuery sub-class" >> {
+
+      "that finds documents using a string range" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("text" -> "all before cee"))
+        index(id = "test2", doc = Json.obj("text" -> "some words after dee"))
+        index(id = "test3", doc = Json.obj("text" -> "only stuff past o up to u"))
+        refreshTestIndex
+        val result3 = search[JsObject](RangeToQuery("text", to = "o", includeUpper = false))
+        result3.hits.map(_.id) must containTheSameElementsAs(Seq("test1", "test2"))
+      }
+
+      "that finds documents using a double range" in new WithTestIndex {
+        index(id = "test1", doc = Json.obj("data" -> -0.1))
+        index(id = "test2", doc = Json.obj("data" -> 3.14))
+        index(id = "test3", doc = Json.obj("data" -> 13.6))
+        refreshTestIndex
+        val result1 = search[JsObject](RangeToQuery("data", to = 10.0))
+        result1.hits.map(_.id) must containTheSameElementsAs(Seq("test1", "test2"))
+        val result2 = search[JsObject](RangeToQuery("data", to = 3.14, includeUpper = false))
+        result2.hits.map(_.id) must containTheSameElementsAs(Seq("test1"))
       }
 
     }
