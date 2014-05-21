@@ -170,7 +170,7 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
             Highlight(fields = Seq(HighlightField("content", fragmentSize = 18, numberOfFragments = 2)))
           ))
         result.hits.length === 1
-        result.hits(0).highlightFor("content") must contain("rows of <em>roses</em>. Do not", "Truths and <em>roses</em> have thorns")
+        result.hits(0).highlightFor("content")  === Seq("rows of <em>roses</em>. Do not", "Truths and <em>roses</em> have thorns")
       }
 
       "use highlight_query" in new WithTestIndexWithMapping {
