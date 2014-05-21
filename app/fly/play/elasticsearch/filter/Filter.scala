@@ -17,7 +17,7 @@ trait Filter {
 
 object RangeExecution extends Enumeration {
   val index, fielddata = Value
-  val default = index
+  def default = index
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(RangeExecution)
   implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }

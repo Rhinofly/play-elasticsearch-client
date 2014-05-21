@@ -34,7 +34,7 @@ object Sort extends JsonUtils {
       case JsObject(Seq((field, spec: JsObject))) =>
         JsSuccess(Sort(
             field,
-            order = (spec \ "order").asOpt[SortOrder.Value].getOrElse(SortOrder.default),
+            order = (spec \ "order").asOpt[SortOrder.Value].getOrElse(SortOrder.desc),
             mode = (spec \ "mode").asOpt[SortMode.Value].getOrElse(SortMode.default),
             missing = (spec \ "missing").asOpt[SortMissing.Value].getOrElse(SortMissing.default)
           ))
@@ -45,15 +45,15 @@ object Sort extends JsonUtils {
 }
 
 object SortOrder extends Enumeration {
-  val asc, desc = Value
-  val default = desc
+  val desc, asc = Value
+  def default = desc
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(SortOrder)
   implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }
 
 object SortMode extends Enumeration {
   val none, min, max, sum, avg = Value
-  val default = none
+  def default = none
   implicit val enumReads: Reads[Value] = EnumUtils.enumReads(SortMode)
   implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
 }

@@ -36,11 +36,11 @@ object DistanceUnit extends Enumeration {
 
 object DistanceType extends Enumeration {
   val arc, plane = Value
-  val default = arc
+  def default = arc
 }
 
 object OptimizeBbox extends Enumeration {
   val memory, indexed, none = Value
-  val default = memory
+  def default = memory
 }
 

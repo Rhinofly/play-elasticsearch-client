@@ -40,7 +40,7 @@ object MultiFieldMapping extends MappingType {
 
   object PathType extends Enumeration {
     val full, just_name = Value
-    val default = full
+    def default = full
     implicit val enumReads: Reads[Value] = EnumUtils.enumReads(PathType)
     implicit val enumWrites: Writes[Value] = EnumUtils.enumWrites
   }
