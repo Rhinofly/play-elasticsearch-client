@@ -1,13 +1,13 @@
 package fly.play.elasticsearch
 
-import org.specs2.execute.{AsResult, Result}
-import org.specs2.mutable.{Around, Specification}
+import org.specs2.execute.{ AsResult, Result }
+import org.specs2.mutable.{ Around, Specification }
 import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{ JsObject, Json }
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import fly.play.elasticsearch.mapping.{IndexType, ObjectMapping, StoreType, StringMapping, TermVectorType}
-import fly.play.elasticsearch.query.{HighlightField, MatchAllQuery, MultiMatchQuery}
+import fly.play.elasticsearch.mapping.{ IndexType, ObjectMapping, StoreType, StringMapping, TermVectorType }
+import fly.play.elasticsearch.query.{ HighlightField, MatchAllQuery, MultiMatchQuery }
 import fly.play.elasticsearch.query._
 import fly.play.elasticsearch.query.Query.queryToElasticSearchQuery
 import fly.play.elasticsearch.query.HighlightType
@@ -18,7 +18,19 @@ import fly.play.elasticsearch.query.HighlightType
  */
 object ElasticSearchQueryTests extends Specification with NoTimeConversions with ClientUtils {
 
-  sequential
+  abstract class WithTestIndexWithMapping extends Scope with Around {
+
+    implicit lazy val temporaryIndex = newTemporaryIndex
+
+    def around[T: AsResult](t: => T): Result = {
+      awaitResult(testIndex.create(Settings(), Seq(testMapping)))
+      try {
+        AsResult.effectively(t)
+      } finally {
+        deleteTestIndex
+      }
+    }
+  }
 
   "ElasticSearchQuery" should {
 
@@ -103,7 +115,7 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
         index(id = "test1", doc = Json.obj("content" -> "Truths and roses have thorns about them.", "extra" -> "Rose rose to put rose roes on her rows of roses."))
         refreshTestIndex
         val result = search[JsObject](MultiMatchQuery(fields = Seq("content", "extra"), value = "roses").
-                       withHighlight(HighlightField("*", highlightType = HighlightType.plain)))
+          withHighlight(HighlightField("*", highlightType = HighlightType.plain)))
         result.hits.length === 1
         result.hits(0).highlightFor("content") must contain("Truths and <em>roses</em> have thorns about them.")
         result.hits(0).highlightFor("extra") must contain("Rose rose to put rose roes on her rows of <em>roses</em>.")
@@ -120,23 +132,21 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
 
       "show highlights using matched_fields" in new WithTestIndexWithMapping {
         index(id = "test1", doc = Json.obj(
-            "content" -> "Do not run with scissors because running with scissors is dangerous.",
-            "extra"   -> "Do not run with scissors because running with scissors is dangerous."
-        ))
+          "content" -> "Do not run with scissors because running with scissors is dangerous.",
+          "extra" -> "Do not run with scissors because running with scissors is dangerous."))
         refreshTestIndex
         val result = search[JsObject](QueryStringQuery(query = "running scissors", fields = Seq("extra")).
-                       withHighlight(HighlightField("content", highlightType = HighlightType.fvh, matchedFields = Seq("content", "extra"))))
+          withHighlight(HighlightField("content", highlightType = HighlightType.fvh, matchedFields = Seq("content", "extra"))))
         result.hits.length === 1
         result.hits(0).highlightFor("content") must contain("Do not run with <em>scissors</em> because <em>running</em> with <em>scissors</em> is dangerous.")
       }
 
       "show highlights in a complete field" in new WithTestIndexWithMapping {
         index(id = "test1", doc = Json.obj(
-            "content" -> """In tegenstelling tot wat algemeen aangenomen wordt is Lorem Ipsum niet zomaar willekeurige tekst. het heeft zijn wortels in een stuk klassieke latijnse literatuur uit 45 v.Chr. en is dus meer dan 2000 jaar oud. Richard McClintock, een professor latijn aan de Hampden-Sydney College in Virginia, heeft een van de meer obscure latijnse woorden, consectetur, uit een Lorem Ipsum passage opgezocht, en heeft tijdens het zoeken naar het woord in de klassieke literatuur de onverdachte bron ontdekt. Lorem Ipsum komt uit de secties 1.10.32 en 1.10.33 van "de Finibus Bonorum et Malorum" (De uitersten van goed en kwaad) door Cicero, geschreven in 45 v.Chr. Dit boek is een verhandeling over de theorie der ethiek, erg populair tijdens de renaissance. De eerste regel van Lorem Ipsum, "Lorem ipsum dolor sit amet..", komt uit een zin in sectie 1.10.32."""
-        ))
+          "content" -> """In tegenstelling tot wat algemeen aangenomen wordt is Lorem Ipsum niet zomaar willekeurige tekst. het heeft zijn wortels in een stuk klassieke latijnse literatuur uit 45 v.Chr. en is dus meer dan 2000 jaar oud. Richard McClintock, een professor latijn aan de Hampden-Sydney College in Virginia, heeft een van de meer obscure latijnse woorden, consectetur, uit een Lorem Ipsum passage opgezocht, en heeft tijdens het zoeken naar het woord in de klassieke literatuur de onverdachte bron ontdekt. Lorem Ipsum komt uit de secties 1.10.32 en 1.10.33 van "de Finibus Bonorum et Malorum" (De uitersten van goed en kwaad) door Cicero, geschreven in 45 v.Chr. Dit boek is een verhandeling over de theorie der ethiek, erg populair tijdens de renaissance. De eerste regel van Lorem Ipsum, "Lorem ipsum dolor sit amet..", komt uit een zin in sectie 1.10.32."""))
         refreshTestIndex
         val result = search[JsObject](TermQuery("content", "ipsum").
-                       withHighlight(HighlightField("content", highlightType = HighlightType.fvh, numberOfFragments = 0)))
+          withHighlight(HighlightField("content", highlightType = HighlightType.fvh, numberOfFragments = 0)))
         result.hits.length === 1
         result.hits(0).highlightFor("content") must contain("""In tegenstelling tot wat algemeen aangenomen wordt is Lorem <em>Ipsum</em> niet zomaar willekeurige tekst. het heeft zijn wortels in een stuk klassieke latijnse literatuur uit 45 v.Chr. en is dus meer dan 2000 jaar oud. Richard McClintock, een professor latijn aan de Hampden-Sydney College in Virginia, heeft een van de meer obscure latijnse woorden, consectetur, uit een Lorem <em>Ipsum</em> passage opgezocht, en heeft tijdens het zoeken naar het woord in de klassieke literatuur de onverdachte bron ontdekt. Lorem <em>Ipsum</em> komt uit de secties 1.10.32 en 1.10.33 van "de Finibus Bonorum et Malorum" (De uitersten van goed en kwaad) door Cicero, geschreven in 45 v.Chr. Dit boek is een verhandeling over de theorie der ethiek, erg populair tijdens de renaissance. De eerste regel van Lorem <em>Ipsum</em>, "Lorem <em>ipsum</em> dolor sit amet..", komt uit een zin in sectie 1.10.32.""")
       }
@@ -145,8 +155,7 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
         index(id = "test1", doc = Json.obj("content" -> "Rose rose to put rose roes on her rows of roses."))
         refreshTestIndex
         val result = search[JsObject](TermQuery("content", "rose").withHighlight(
-            Highlight(fields = Seq(HighlightField("content")), tags = Some(Seq(("""<span class="hilite">""", "</span>"))))
-          ))
+          Highlight(fields = Seq(HighlightField("content")), tags = Some(Seq(("""<span class="hilite">""", "</span>"))))))
         result.hits.length === 1
         result.hits(0).highlightFor("content") must contain("""<span class="hilite">Rose</span> <span class="hilite">rose</span> to put <span class="hilite">rose</span> roes on her rows of roses.""").forall
       }
@@ -155,8 +164,7 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
         index(id = "test1", doc = Json.obj("content" -> "Rose rose to put rose roes on her rows of roses."))
         refreshTestIndex
         val result = search[JsObject](TermQuery("content", "rose").withHighlight(
-            Highlight(fields = Seq(HighlightField("content")), tagsSchema = Some("styled"))
-          ))
+          Highlight(fields = Seq(HighlightField("content")), tagsSchema = Some("styled"))))
         result.hits.length === 1
         result.hits(0).highlightFor("content") must contain("""<em class="hlt1">Rose</em> <em class="hlt1">rose</em> to put <em class="hlt1">rose</em> roes on her rows of roses.""").forall
       }
@@ -167,18 +175,16 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
         index(id = "test1", doc = Json.obj("content" -> "Rose rose to put rose roes on her rows of roses. Do not run with scissors. Truths and roses have thorns about them."))
         refreshTestIndex
         val result = search[JsObject](TermQuery("content", "roses").withHighlight(
-            Highlight(fields = Seq(HighlightField("content", fragmentSize = 18, numberOfFragments = 2)))
-          ))
+          Highlight(fields = Seq(HighlightField("content", fragmentSize = 18, numberOfFragments = 2)))))
         result.hits.length === 1
-        result.hits(0).highlightFor("content")  === Seq("rows of <em>roses</em>. Do not", "Truths and <em>roses</em> have thorns")
+        result.hits(0).highlightFor("content") === Seq("rows of <em>roses</em>. Do not", "Truths and <em>roses</em> have thorns")
       }
 
       "use highlight_query" in new WithTestIndexWithMapping {
         index(id = "test1", doc = Json.obj("content" -> "Rose rose to put rose roes on her rows of roses. Do not run with scissors."))
         refreshTestIndex
         val result = search[JsObject](TermQuery("content", "rose").withHighlight(
-            Highlight(fields = Seq(HighlightField("content", highlightQuery = Some(TermQuery("content", "scissors")))))
-          ))
+          Highlight(fields = Seq(HighlightField("content", highlightQuery = Some(TermQuery("content", "scissors")))))))
         result.hits.length === 1
         result.hits(0).highlightFor("content") must contain("rose roes on her rows of roses. Do not run with <em>scissors</em>.")
       }
@@ -187,26 +193,22 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
         index(id = "test1", doc = Json.obj("content" -> "Rose rose to put rose roes on her rows of roses. Do not run with scissors."))
         refreshTestIndex
         val result = search[JsObject](TermQuery("content", "rose").withHighlight(
-            Highlight(fields = Seq(HighlightField("content")), tagsSchema = Some("styled"), highlightQuery = Some(TermQuery("content", "scissors")))
-          ))
+          Highlight(fields = Seq(HighlightField("content")), tagsSchema = Some("styled"), highlightQuery = Some(TermQuery("content", "scissors")))))
         result.hits.length === 1
         result.hits(0).highlightFor("content") must contain("""rose roes on her rows of roses. Do not run with <em class="hlt1">scissors</em>.""")
       }
 
       "use require_field_match" in new WithTestIndexWithMapping {
         index(id = "test1", doc = Json.obj(
-            "content" -> "Rose rose to put rose roes on her rows of roses. Do not run with scissors.",
-            "extra" -> "Rose rose to put rose roes on her rows of roses."
-          ))
+          "content" -> "Rose rose to put rose roes on her rows of roses. Do not run with scissors.",
+          "extra" -> "Rose rose to put rose roes on her rows of roses."))
         refreshTestIndex
         val result1 = search[JsObject](QueryStringQuery(fields = Seq("content"), query = "roses AND scissors").withHighlight(
-            HighlightField("extra")
-          ))
+          HighlightField("extra")))
         result1.hits.length === 1
         result1.hits(0).highlightFor("extra") must contain("""Rose rose to put rose roes on her rows of <em>roses</em>.""")
         val result2 = search[JsObject](QueryStringQuery(fields = Seq("content"), query = "roses AND scissors").withHighlight(
-            HighlightField("extra", requireFieldMatch = true)
-          ))
+          HighlightField("extra", requireFieldMatch = true)))
         result2.hits.length === 1
         result2.hits(0).highlightFor("extra") === Seq.empty
       }
@@ -218,20 +220,10 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
   }
 
   /* Don't analyze test and sub, which would remove the "a" stopword. */
-  val testMapping =
-    ObjectMapping(testTypeName, properties = Set(
+  def testMapping(implicit i: TemporaryIndex) =
+    ObjectMapping(i.typeName, properties = Set(
       StringMapping("content", store = StoreType.yes, index = IndexType.analyzed, termVector = TermVectorType.with_positions_offsets),
-      StringMapping("extra",   store = StoreType.no,  index = IndexType.analyzed, termVector = TermVectorType.with_positions_offsets),
-      StringMapping("test",    store = StoreType.yes, index = IndexType.not_analyzed),
-      StringMapping("sub",     store = StoreType.yes, index = IndexType.not_analyzed)
-    ))
-
-  abstract class WithTestIndexWithMapping extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex else true
-      awaitResult(testIndex.create(Settings(), Seq(testMapping)))
-      AsResult.effectively(t)
-    }
-  }
-
+      StringMapping("extra", store = StoreType.no, index = IndexType.analyzed, termVector = TermVectorType.with_positions_offsets),
+      StringMapping("test", store = StoreType.yes, index = IndexType.not_analyzed),
+      StringMapping("sub", store = StoreType.yes, index = IndexType.not_analyzed)))
 }

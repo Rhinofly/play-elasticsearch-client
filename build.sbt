@@ -4,7 +4,10 @@ version := "0.14-2.3-2-SNAPSHOT"
 
 organization := "nl.rhinofly"
 
-libraryDependencies += ws
+libraryDependencies ++= Seq(
+  "com.typesafe.play" %% "play-ws" % "2.3.0-RC1",
+  "org.specs2" %% "specs2" % "2.3.12" % "test"
+)
 
 publishTo := {
     val repo = if (version.value endsWith "SNAPSHOT") "snapshot" else "release"
@@ -17,5 +20,4 @@ scalacOptions += "-feature"
 
 ScoverageSbtPlugin.instrumentSettings
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
-
+lazy val root = project in file(".")

@@ -4,13 +4,10 @@ import org.specs2.mutable.Specification
 import org.specs2.time.NoTimeConversions
 import play.api.libs.json.{JsObject, Json, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.api.test.Helpers.BAD_REQUEST
 import fly.play.elasticsearch.query.{MatchAllQuery, TermQuery}
 import play.api.libs.json.JsArray
 
 object ClientTests extends Specification with NoTimeConversions with ClientUtils {
-
-  sequential
 
   "Client" should {
 
@@ -45,19 +42,18 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
 
     br
 
-    "index should" >> {
+    "index should" >> new WithTempIndex {
 
       "have a create method" >> {
 
         "that creates an index" in {
-          deleteTestIndex
           val result = createTestIndex
           result === ()
         }
 
         "that throws an exception if an index exists" in {
           val futureResponse = testIndex.create
-          isException(futureResponse, BAD_REQUEST, testIndexName)
+          isException(futureResponse, 400, testIndexName)
         }
 
       }
@@ -112,7 +108,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
       }
 
       "have an apply method to access a type" in {
-        testIndex("test") must beAnInstanceOf[Client#Index#Type]
+        testIndex.apply("test") must beAnInstanceOf[Client#Index#Type]
       }
 
       "type should" >> {

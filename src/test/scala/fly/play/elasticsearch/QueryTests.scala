@@ -9,8 +9,6 @@ import fly.play.elasticsearch.query.Query.queryToElasticSearchQuery
 
 object QueryTests extends Specification with NoTimeConversions with ClientUtils {
 
-  sequential
-
   "Query" should {
 
     br

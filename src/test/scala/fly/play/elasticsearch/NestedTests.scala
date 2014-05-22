@@ -14,10 +14,52 @@ import fly.play.elasticsearch.query.Query.queryToElasticSearchQuery
 
 class NestedTests extends Specification with NoTimeConversions with ClientUtils {
 
+   abstract class WithTestIndexWithMapping extends Scope with Around {
+    implicit lazy val temporaryIndex = newTemporaryIndex
+
+    def around[T: AsResult](t: => T): Result = {
+      val mapping =
+        ObjectMapping(temporaryIndex.typeName, properties = Set(
+          StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
+          NestedMapping("computer", properties = Set(
+            StringMapping("make", index = IndexType.not_analyzed), StringMapping("model", index = IndexType.not_analyzed)
+          ))
+        ))
+      awaitResult(testIndex.create(Seq(mapping)))
+      people map {p => index(doc = p)}
+      refreshTestIndex
+      try {
+        AsResult.effectively(t)
+      } finally {
+        deleteTestIndex
+      }
+    }
+  }
+
+  abstract class WithTestIndexWithMappingIncludeInRoot extends Scope with Around {
+    implicit lazy val temporaryIndex = newTemporaryIndex
+
+    def around[T: AsResult](t: => T): Result = {
+      val mapping =
+        ObjectMapping(temporaryIndex.typeName, properties = Set(
+          StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
+          NestedMapping("computer", includeInRoot = true, properties = Set(
+            StringMapping("make"), StringMapping("model")
+          ))
+        ))
+      awaitResult(testIndex.create(Seq(mapping)))
+      people map {p => index(doc = p)}
+      refreshTestIndex
+      try {
+        AsResult.effectively(t)
+      } finally {
+        deleteTestIndex
+      }
+    }
+  }
+
   def hitNames(result: SearchResult[JsObject]) = result.hits.map(p => (p.source \ "name").as[String])
   val query = BoolQuery(musts = Seq(MatchQuery("computer.make", "Apple"), MatchQuery("computer.model", "UX31a")))
-
-  sequential
 
   "Nested objects" should {
 
@@ -51,38 +93,6 @@ class NestedTests extends Specification with NoTimeConversions with ClientUtils 
   val p4 = Json.obj("name" -> "Nobody", "computer" -> Json.obj("make" -> "Apple", "model" -> "UX31a"))
   val people = Seq(p1, p2, p3, p4)
 
-  abstract class WithTestIndexWithMapping extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      val mapping =
-        ObjectMapping(testTypeName, properties = Set(
-          StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
-          NestedMapping("computer", properties = Set(
-            StringMapping("make", index = IndexType.not_analyzed), StringMapping("model", index = IndexType.not_analyzed)
-          ))
-        ))
-      if (existsTestIndex) deleteTestIndex
-      awaitResult(testIndex.create(Seq(mapping)))
-      people map {p => index(doc = p)}
-      refreshTestIndex
-      AsResult.effectively(t)
-    }
-  }
 
-  abstract class WithTestIndexWithMappingIncludeInRoot extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      val mapping =
-        ObjectMapping(testTypeName, properties = Set(
-          StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
-          NestedMapping("computer", includeInRoot = true, properties = Set(
-            StringMapping("make"), StringMapping("model")
-          ))
-        ))
-      if (existsTestIndex) deleteTestIndex
-      awaitResult(testIndex.create(Seq(mapping)))
-      people map {p => index(doc = p)}
-      refreshTestIndex
-      AsResult.effectively(t)
-    }
-  }
 
 }

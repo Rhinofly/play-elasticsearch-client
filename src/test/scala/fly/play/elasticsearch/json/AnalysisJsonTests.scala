@@ -45,8 +45,6 @@ object AnalysisJsonTests extends Specification with NoTimeConversions with Clien
     CharFilter.filterListReads.reads(CharFilter.filterListWrites.writes(Seq(f))) === JsSuccess(Seq(f))
   }
 
-  sequential
-
   "Analysis should" >> {
 
     /* Analyzer */

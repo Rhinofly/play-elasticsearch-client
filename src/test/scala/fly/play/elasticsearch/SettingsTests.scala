@@ -12,38 +12,33 @@ import play.api.libs.json.Json
 import fly.play.elasticsearch.mapping._
 import fly.play.elasticsearch.query.MultiMatchQuery
 import fly.play.elasticsearch.query.TermQuery
-import fly.play.elasticsearch.analysis.{Analysis, StandardAnalyzer}
+import fly.play.elasticsearch.analysis.{ Analysis, StandardAnalyzer }
 
 object SettingsTests extends Specification with NoTimeConversions with ClientUtils {
 
-  sequential
+  "index should" >> {
 
-    "index should" >> {
-
-      "have a create method that defines settings and mappings for the index" in {
-        if (existsTestIndex) deleteTestIndex
-        val result = createTestIndexWithSettingsAndMapping
-        deleteTestIndex
-        result === ()
-      }
-
-//      "have a settings method to get the settings" in new WithTestIndexSettingsAndMapping {
-//        val settingsResults: Settings = awaitResult(testIndex.settings)
-//        equalSettings(settingsResults, testSettings) === true
-//      }
-
+    "have a create method that defines settings and mappings for the index" in new WithTempIndex {
+      val result = createTestIndexWithSettingsAndMapping
+      deleteTestIndex
+      result === ()
     }
 
-  val testMapping =
-    ObjectMapping(testTypeName, properties = Set(
+    //      "have a settings method to get the settings" in new WithTestIndexSettingsAndMapping {
+    //        val settingsResults: Settings = awaitResult(testIndex.settings)
+    //        equalSettings(settingsResults, testSettings) === true
+    //      }
+
+  }
+
+  def testMapping(implicit i:TemporaryIndex) =
+    ObjectMapping(i.typeName, properties = Set(
       StringMapping("stringField", store = StoreType.yes, index = IndexType.not_analyzed),
       StringMapping("textField", store = StoreType.yes, index = IndexType.analyzed, analyzer = "simple", boost = 3.0),
       NumberMapping("integerField", numberType = NumberType.integer),
-      ObjectMapping("objectField", properties =  Set(
+      ObjectMapping("objectField", properties = Set(
         DateMapping("dateField"),
-        BooleanMapping("booleanField", index=IndexType.no)
-      ))
-    ))
+        BooleanMapping("booleanField", index = IndexType.no)))))
 
   val testSettings =
     Settings(
@@ -51,12 +46,9 @@ object SettingsTests extends Specification with NoTimeConversions with ClientUti
       nrOfReplicas = 3,
       analysis = Some(Analysis(
         analyzers = Seq(
-          StandardAnalyzer(name="standard", stopwords = Some(Seq("de", "het", "een")))
-        ),
+          StandardAnalyzer(name = "standard", stopwords = Some(Seq("de", "het", "een")))),
         tokenizers = Seq.empty,
-        filters = Seq.empty
-      ))
-    )
+        filters = Seq.empty)))
 
   def equalSettings(a: Settings, b: Settings): Boolean = {
     def test[T](a: T, b: T, reason: String): Boolean =
@@ -65,22 +57,28 @@ object SettingsTests extends Specification with NoTimeConversions with ClientUti
         false
       }
     test(a.nrOfShards, b.nrOfShards, "nrOfShards ") &&
-    test(a.nrOfReplicas, b.nrOfReplicas, "nrOfReplicas") &&
-    a.analysis.map{aa => b.analysis match {
-      case Some(ba) =>
-        aa.analyzers.zip(ba.analyzers).forall{ case (anlzr, bnlzr) =>
-          test(anlzr, bnlzr, "analyzers")
+      test(a.nrOfReplicas, b.nrOfReplicas, "nrOfReplicas") &&
+      a.analysis.map { aa =>
+        b.analysis match {
+          case Some(ba) =>
+            aa.analyzers.zip(ba.analyzers).forall {
+              case (anlzr, bnlzr) =>
+                test(anlzr, bnlzr, "analyzers")
+            }
+          case None => test(a.analysis, b.analysis, "Missing Analysis")
         }
-      case None => test(a.analysis, b.analysis, "Missing Analysis")
-    }}.getOrElse(test(a.analysis, b.analysis, "Missing Analysis"))
+      }.getOrElse(test(a.analysis, b.analysis, "Missing Analysis"))
   }
 
-  def createTestIndexWithSettingsAndMapping = awaitResult(testIndex.create(testSettings, Seq(testMapping)))
+  def createTestIndexWithSettingsAndMapping(implicit i:TemporaryIndex) =
+    awaitResult(testIndex.create(testSettings, Seq(testMapping)))
 
   abstract class WithTestIndexSettingsAndMapping extends Scope with Around {
+
+    implicit lazy val temporaryIndex = newTemporaryIndex
+
     def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex
-        createTestIndexWithSettingsAndMapping
+      createTestIndexWithSettingsAndMapping
       try {
         AsResult.effectively(t)
       } finally {

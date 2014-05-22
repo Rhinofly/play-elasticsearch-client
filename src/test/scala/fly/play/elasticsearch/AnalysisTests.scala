@@ -1,100 +1,99 @@
 package fly.play.elasticsearch.analysis
 
-import org.specs2.execute.{AsResult, Result}
-import org.specs2.mutable.{Around, Specification}
+import org.specs2.execute.{ AsResult, Result }
+import org.specs2.mutable.{ Around, Specification }
 import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
-import play.api.libs.json.{Format, JsObject, Json, JsPath, JsSuccess, Reads, Writes}
+import play.api.libs.json.{ Format, JsObject, Json, JsPath, JsSuccess, Reads, Writes }
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import fly.play.elasticsearch.{ClientUtils, Settings}
+import fly.play.elasticsearch.{ ClientUtils, Settings }
 import fly.play.elasticsearch.utils.JsonUtils
-import fly.play.elasticsearch.mapping.{IndexType, Mapping, NestableMapping, ObjectMapping, StoreType, StringMapping}
-import fly.play.elasticsearch.query.{MatchQuery, MultiMatchQuery, TermQuery}
+import fly.play.elasticsearch.mapping.{ IndexType, Mapping, NestableMapping, ObjectMapping, StoreType, StringMapping }
+import fly.play.elasticsearch.query.{ MatchQuery, MultiMatchQuery, TermQuery }
 
 object AnalysisTests extends Specification with NoTimeConversions with ClientUtils {
 
   abstract class WithTestIndexWithAnalysis(analysis: Analysis, mapping: NestableMapping) extends Scope with Around {
+    implicit lazy val temporaryIndex = newTemporaryIndex
+
     def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex
-      awaitResult( testIndex.create(Settings(analysis = Some(analysis)), Seq(ObjectMapping(testTypeName, properties = Set(mapping)))) )
+      awaitResult(testIndex.create(Settings(analysis = Some(analysis)), Seq(ObjectMapping(temporaryIndex.typeName, properties = Set(mapping)))))
       try {
         AsResult.effectively(t)
+      } finally {
+        deleteTestIndex
       }
-      // Leave the testIndex for inspection.
     }
   }
 
   abstract class WithTestIndexWithSimpleAnalysis(analysis: Analysis) extends Scope with Around {
+    implicit lazy val temporaryIndex = newTemporaryIndex
+
     def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex
       createTestIndex(Settings(analysis = Some(analysis)))
       try {
         AsResult.effectively(t)
+      } finally {
+        deleteTestIndex
       }
-      // Leave the testIndex for inspection.
     }
   }
-
-  sequential
 
   "Analysis should" >> {
 
     /* Analyzer */
-    implicit class ResultEnhancement(result:Seq[AnalyzedToken]) {
+    implicit class ResultEnhancement(result: Seq[AnalyzedToken]) {
       def asTokens = result.map(_.token)
     }
 
     "have a WhitespaceAnalyzer class that divides text at whitespace" in
-        new WithTestIndexWithSimpleAnalysis(Analysis(Seq(WhitespaceAnalyzer("analyzer")))) {
-      val result = analyze("to be or not to be", "analyzer")
-      result.asTokens must containTheSameElementsAs(Seq("to", "be", "or", "not", "to", "be"))
-    }
+      new WithTestIndexWithSimpleAnalysis(Analysis(Seq(WhitespaceAnalyzer("analyzer")))) {
+        val result = analyze("to be or not to be", "analyzer")
+        result.asTokens must containTheSameElementsAs(Seq("to", "be", "or", "not", "to", "be"))
+      }
 
     "have a StopAnalyzer class that skips stopwords" in
-        new WithTestIndexWithSimpleAnalysis(Analysis(Seq(StopAnalyzer("analyzer", stopwords = Some(Seq("to", "be")))))) {
-      val result = analyze("to be or not to be", "analyzer")
-      result.asTokens must containTheSameElementsAs(Seq("or", "not"))
-    }
+      new WithTestIndexWithSimpleAnalysis(Analysis(Seq(StopAnalyzer("analyzer", stopwords = Some(Seq("to", "be")))))) {
+        val result = analyze("to be or not to be", "analyzer")
+        result.asTokens must containTheSameElementsAs(Seq("or", "not"))
+      }
 
     "have a KeywordAnalyzer class that tokenizes an entire stream as a single token" in
-        new WithTestIndexWithSimpleAnalysis(Analysis(Seq(KeywordAnalyzer("analyzer")))) {
-      val result = analyze("to be or not to be", "analyzer")
-      result.asTokens must containTheSameElementsAs(Seq("to be or not to be"))
-    }
+      new WithTestIndexWithSimpleAnalysis(Analysis(Seq(KeywordAnalyzer("analyzer")))) {
+        val result = analyze("to be or not to be", "analyzer")
+        result.asTokens must containTheSameElementsAs(Seq("to be or not to be"))
+      }
 
     "have a PatternAnalyzer class that can flexibly separate text into terms via a regular expression" in
-        new WithTestIndexWithSimpleAnalysis(Analysis(Seq( PatternAnalyzer("analyzer", pattern = Some(""",\s*""")) ))) {
-      val result = analyze("to be, or not to be", "analyzer")
-      result.asTokens must containTheSameElementsAs(Seq("to be", "or not to be"))
-    }
+      new WithTestIndexWithSimpleAnalysis(Analysis(Seq(PatternAnalyzer("analyzer", pattern = Some(""",\s*"""))))) {
+        val result = analyze("to be, or not to be", "analyzer")
+        result.asTokens must containTheSameElementsAs(Seq("to be", "or not to be"))
+      }
 
     "have a LanguageAnalyzer class that analyzes specific language text" in
-        new WithTestIndexWithSimpleAnalysis(Analysis(Seq(
-          LanguageAnalyzer("en", language = "english"),
-          LanguageAnalyzer("nl", language = "dutch")
-        ))) {
-      val enResult = analyze("to be or not to be, that is the question", "english")
-      enResult.asTokens must containTheSameElementsAs(Seq("question"))
-      val nlResult = analyze("to be or not to be, that is the question", "dutch")
-      nlResult.asTokens must containTheSameElementsAs(Seq("to", "be", "or", "not", "to", "be", "that", "the", "question"))
-    }
+      new WithTestIndexWithSimpleAnalysis(Analysis(Seq(
+        LanguageAnalyzer("en", language = "english"),
+        LanguageAnalyzer("nl", language = "dutch")))) {
+        val enResult = analyze("to be or not to be, that is the question", "english")
+        enResult.asTokens must containTheSameElementsAs(Seq("question"))
+        val nlResult = analyze("to be or not to be, that is the question", "dutch")
+        nlResult.asTokens must containTheSameElementsAs(Seq("to", "be", "or", "not", "to", "be", "that", "the", "question"))
+      }
 
     "have a SnowballAnalyzer class that uses a snowball filter" in
-        new WithTestIndexWithSimpleAnalysis(Analysis(Seq(
-          SnowballAnalyzer("snowball2", language = Some("English"), stopwords = Some(Seq("or", "be")))
-        ))) {
-      val result = analyze("to be or not to be", "snowball2")
-      result.asTokens must containTheSameElementsAs(Seq("to", "not", "to"))
-    }
+      new WithTestIndexWithSimpleAnalysis(Analysis(Seq(
+        SnowballAnalyzer("snowball2", language = Some("English"), stopwords = Some(Seq("or", "be")))))) {
+        val result = analyze("to be or not to be", "snowball2")
+        result.asTokens must containTheSameElementsAs(Seq("to", "not", "to"))
+      }
 
     "have a CustomAnalyzer class that allows you to compose your own analyzer" in
-        new WithTestIndexWithSimpleAnalysis(Analysis(
-          analyzers = Seq( CustomAnalyzer("analyzer", tokenizer = "standard", filter = Some(Seq()), charFilter = Some(Seq("html"))) ),
-          charFilters = Seq( HtmlStripCharFilter("html") )
-        )) {
-      val result = analyze("to be or <em>not</em> to be", "analyzer")
-      result.asTokens must containTheSameElementsAs(Seq("to", "be", "or", "not", "to", "be"))
-    }
+      new WithTestIndexWithSimpleAnalysis(Analysis(
+        analyzers = Seq(CustomAnalyzer("analyzer", tokenizer = "standard", filter = Some(Seq()), charFilter = Some(Seq("html")))),
+        charFilters = Seq(HtmlStripCharFilter("html")))) {
+        val result = analyze("to be or <em>not</em> to be", "analyzer")
+        result.asTokens must containTheSameElementsAs(Seq("to", "be", "or", "not", "to", "be"))
+      }
 
     /* Tokenizer */
 
@@ -102,8 +101,7 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
 
       val analysis = Analysis(
         analyzers = Seq(CustomAnalyzer("test-analyzer", tokenizer = "test-tokenizer")),
-        tokenizers = Seq(StandardTokenizer("test-tokenizer", maxTokenLength = 3))
-      )
+        tokenizers = Seq(StandardTokenizer("test-tokenizer", maxTokenLength = 3)))
       val mapping = StringMapping("test-field", analyzer = "test-analyzer")
 
       "is used for indexing and querying" in new WithTestIndexWithAnalysis(analysis, mapping) {
@@ -124,8 +122,7 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
 
       val analysis = Analysis(
         analyzers = Seq(CustomAnalyzer("testanalyzer", tokenizer = "letter", filter = Some(Seq("asciifolding")))),
-        filters = Seq(AsciiFoldingTokenFilter("asciifolding"))
-      )
+        filters = Seq(AsciiFoldingTokenFilter("asciifolding")))
       val mapping = StringMapping("testfield", analyzer = "testanalyzer", store = StoreType.yes)
       "is used for indexing and querying" in new WithTestIndexWithAnalysis(analysis, mapping) {
         val sentence = "\u00AB Conna\u00EEtre le pass\u00E9 est une mani\u00E8re de s\'en lib\u00E9rer. \u00BB"
@@ -146,8 +143,7 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
 
       val analysis = Analysis(
         analyzers = Seq(CustomAnalyzer("test-analyzer", tokenizer = "standard", filter = Some(Seq("synonym")))),
-        filters = Seq(SynonymTokenFilter("synonym", synonyms = Some(Seq("mini, small, little, slight", "big, great, tall"))))
-      )
+        filters = Seq(SynonymTokenFilter("synonym", synonyms = Some(Seq("mini, small, little, slight", "big, great, tall")))))
       val mapping = StringMapping("test-field", analyzer = "test-analyzer")
       "is used for indexing and querying" in new WithTestIndexWithAnalysis(analysis, mapping) {
         index(id = "1", doc = Json.obj("test-field" -> "This is a small sentence.", "not-analyzed" -> "This is a small sentence."), "refresh" -> "true")

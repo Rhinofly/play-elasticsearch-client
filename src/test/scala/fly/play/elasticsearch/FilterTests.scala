@@ -16,8 +16,6 @@ import fly.play.elasticsearch.filter.BoolFilter
 
 object FilterTests extends Specification with NoTimeConversions with ClientUtils {
 
-  sequential
-
   "Filter" should {
 
     br
