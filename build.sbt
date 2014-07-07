@@ -1,11 +1,13 @@
 name := "play-elasticsearch-client"
 
-version := "0.14-2.3-2-SNAPSHOT"
+version := "0.14-2.3-3-SNAPSHOT"
+
+scalaVersion := "2.11.1"
 
 organization := "nl.rhinofly"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.play" %% "play-ws" % "2.3.0-RC1",
+  "com.typesafe.play" %% "play-ws" % "2.3.1",
   "org.specs2" %% "specs2" % "2.3.12" % "test"
 )
 
@@ -18,6 +20,6 @@ credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
 
 scalacOptions += "-feature"
 
-ScoverageSbtPlugin.instrumentSettings
+//ScoverageSbtPlugin.instrumentSettings
 
 lazy val root = project in file(".")
