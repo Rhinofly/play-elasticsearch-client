@@ -23,3 +23,5 @@ scalacOptions += "-feature"
 //ScoverageSbtPlugin.instrumentSettings
 
 lazy val root = project in file(".")
+
+crossScalaVersions := Seq("2.10.4", "2.11.1")
