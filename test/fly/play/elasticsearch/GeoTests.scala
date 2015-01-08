@@ -11,6 +11,7 @@ import fly.play.elasticsearch.geo.DistanceUnit.{centimeters, kilometers}
 import fly.play.elasticsearch.mapping.{ObjectMapping, StringMapping}
 import fly.play.elasticsearch.query.{FilteredQuery, MatchAllQuery}
 import fly.play.elasticsearch.query.Query.queryToElasticSearchQuery
+import play.api.test.WithApplication
 
 object GeoTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -108,11 +109,11 @@ object GeoTests extends Specification with NoTimeConversions with ClientUtils {
     )))
 
 
-  abstract class WithTestIndexWithMapping extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex
-      createTestIndexWithMapping
-      try {
+  abstract class WithTestIndexWithMapping extends WithApplication {
+    override def around[T: AsResult](t: => T): Result = {
+      super.around { 
+        if (existsTestIndex) deleteTestIndex
+        createTestIndexWithMapping
         AsResult.effectively(t)
         // Leave the index, so it can be inspected.
       }

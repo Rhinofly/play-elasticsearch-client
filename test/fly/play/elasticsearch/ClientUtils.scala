@@ -5,14 +5,12 @@ import scala.concurrent.Awaitable
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.util.Failure
-
 import org.specs2.execute.AsResult
 import org.specs2.execute.Result
 import org.specs2.mutable.Around
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
-
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
@@ -20,6 +18,9 @@ import play.api.libs.json.Reads
 import play.api.libs.json.Writes
 import play.api.libs.json.__
 import fly.play.elasticsearch.query.ElasticSearchQuery
+import play.api.test.WithApplication
+import play.api.test.FakeApplication
+import play.api.test.Helpers
 
 trait ClientUtils { self: Specification with NoTimeConversions =>
 
@@ -48,7 +49,8 @@ trait ClientUtils { self: Specification with NoTimeConversions =>
   def del[T](id: String, parameters: Parameter*) = awaitResult(testType.delete(id = id, parameters: _*))
   def update[T: Writes](id: String, doc: T, parameters: Parameter*) = awaitResult(testType.updateV(id = id, doc = doc, parameters: _*))
   def search[T: Reads](query: ElasticSearchQuery, parameters: Parameter*) = awaitResult(testType.search[T](query = query, parameters: _*))
-
+  def bulk[T: Writes](xs:Seq[(String,T)]) = awaitResult(testType.bulk(xs))
+  
   val testDocument = TestDocument("name")
 
   case class TestDocument(name: String)
@@ -70,14 +72,17 @@ trait ClientUtils { self: Specification with NoTimeConversions =>
         error must contain(stringInError)
     }
   }
-
-  abstract class WithTestIndex extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex else ()
-      createTestIndex
-      AsResult.effectively(t)
-      /* Leave the testIndex after the last test, for inspection via ES-head. */
-    }
+  
+  abstract class WithTestIndex extends WithApplication { 
+    override def around[T: AsResult](t: => T): Result = {
+      super.around {
+        if (existsTestIndex) deleteTestIndex else ()
+      
+        createTestIndex  
+        
+        AsResult.effectively(t)
+      }
+    }     
   }
 
 }

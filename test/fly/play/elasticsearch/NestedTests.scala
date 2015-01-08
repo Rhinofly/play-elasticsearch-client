@@ -11,6 +11,7 @@ import fly.play.elasticsearch.filter._
 import fly.play.elasticsearch.mapping._
 import fly.play.elasticsearch.query._
 import fly.play.elasticsearch.query.Query.queryToElasticSearchQuery
+import play.api.test.WithApplication
 
 class NestedTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -51,37 +52,42 @@ class NestedTests extends Specification with NoTimeConversions with ClientUtils 
   val p4 = Json.obj("name" -> "Nobody", "computer" -> Json.obj("make" -> "Apple", "model" -> "UX31a"))
   val people = Seq(p1, p2, p3, p4)
 
-  abstract class WithTestIndexWithMapping extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      val mapping =
-        ObjectMapping(testTypeName, properties = Set(
-          StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
-          NestedMapping("computer", properties = Set(
-            StringMapping("make", index = IndexType.not_analyzed), StringMapping("model", index = IndexType.not_analyzed)
+  abstract class WithTestIndexWithMapping extends WithApplication {
+    override def around[T: AsResult](t: => T): Result = {
+      super.around {
+        val mapping =
+          ObjectMapping(testTypeName, properties = Set(
+            StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
+            NestedMapping("computer", properties = Set(
+              StringMapping("make", index = IndexType.not_analyzed), StringMapping("model", index = IndexType.not_analyzed)
+            ))
           ))
-        ))
-      if (existsTestIndex) deleteTestIndex
-      awaitResult(testIndex.create(Seq(mapping)))
-      people map {p => index(doc = p)}
-      refreshTestIndex
-      AsResult.effectively(t)
+        if (existsTestIndex) deleteTestIndex
+        awaitResult(testIndex.create(Seq(mapping)))
+        people map {p => index(doc = p)}
+        refreshTestIndex
+        AsResult.effectively(t)
+      }
     }
   }
 
-  abstract class WithTestIndexWithMappingIncludeInRoot extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      val mapping =
-        ObjectMapping(testTypeName, properties = Set(
-          StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
-          NestedMapping("computer", includeInRoot = true, properties = Set(
-            StringMapping("make"), StringMapping("model")
+  abstract class WithTestIndexWithMappingIncludeInRoot extends WithApplication {
+    override def around[T: AsResult](t: => T): Result = {
+      super.around {
+        val mapping =
+          ObjectMapping(testTypeName, properties = Set(
+            StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
+            NestedMapping("computer", includeInRoot = true, properties = Set(
+              StringMapping("make"), StringMapping("model")
+            ))
           ))
-        ))
-      if (existsTestIndex) deleteTestIndex
-      awaitResult(testIndex.create(Seq(mapping)))
-      people map {p => index(doc = p)}
-      refreshTestIndex
-      AsResult.effectively(t)
+        if (existsTestIndex) deleteTestIndex
+        awaitResult(testIndex.create(Seq(mapping)))
+        people map {p => index(doc = p)}
+        refreshTestIndex
+        
+        AsResult.effectively(t)
+      }
     }
   }
 

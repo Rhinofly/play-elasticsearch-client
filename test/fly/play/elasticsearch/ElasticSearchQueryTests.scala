@@ -11,6 +11,7 @@ import fly.play.elasticsearch.query.{HighlightField, MatchAllQuery, MultiMatchQu
 import fly.play.elasticsearch.query._
 import fly.play.elasticsearch.query.Query.queryToElasticSearchQuery
 import fly.play.elasticsearch.query.HighlightType
+import play.api.test.WithApplication
 
 /**
  * ElasticSearchQuery is an extension of Query, with extra properties.
@@ -226,11 +227,13 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
       StringMapping("sub",     store = StoreType.yes, index = IndexType.not_analyzed)
     ))
 
-  abstract class WithTestIndexWithMapping extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex else true
-      awaitResult(testIndex.create(Settings(), Seq(testMapping)))
-      AsResult.effectively(t)
+  abstract class WithTestIndexWithMapping extends WithApplication {
+    override def around[T: AsResult](t: => T): Result = {
+      super.around { 
+        if (existsTestIndex) deleteTestIndex else true
+        awaitResult(testIndex.create(Settings(), Seq(testMapping)))
+        AsResult.effectively(t) 
+      }
     }
   }
 

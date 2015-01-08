@@ -7,7 +7,7 @@ import scala.language.implicitConversions
 import scala.util.Try
 
 trait JsonUtils {
-
+  
   /**
    * These functions are used to create Json objects from filtered sequences of (String, JsValue) tuples.
    * When the JsValue in a tuple is JsNull or JsUndefined or an empty JsObject, that tuple is considered not valid, and will be filtered out.
@@ -43,7 +43,7 @@ trait JsonUtils {
   protected def isValidJsonProperty(property: (String, JsValue)) =
     property match {
       case (_, obj: JsObject) => obj.fields.length > 0
-      case (_, v) => (v != JsNull && v != JsUndefined)
+      case (_, v) => (v != JsNull && !v.isInstanceOf[JsUndefined])
     }
 
   /**

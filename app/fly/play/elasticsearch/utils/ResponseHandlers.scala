@@ -3,7 +3,7 @@ package fly.play.elasticsearch.utils
 import fly.play.elasticsearch._
 import play.api.libs.json.{JsObject, JsValue, Reads, __}
 import play.api.libs.functional.syntax._
-import play.api.libs.ws.Response
+import play.api.libs.ws.WSResponse
 
 object ResponseHandlers {
 
@@ -14,7 +14,7 @@ object ResponseHandlers {
     (Version.reader and sourceOrFieldsReader[T]).tupled
   }
 
-  val unitOrError: Response => Unit = convertOrError(_ => ())
+  val unitOrError: WSResponse => Unit = convertOrError(_ => ())
 
   def fromJsonOrError[T: Reads] = convertJsonOrError(_.as[T])
 
@@ -23,29 +23,29 @@ object ResponseHandlers {
   def convertJsonOrError[T](converter: JsValue => T) =
     convertOrError[T](response => converter(response.json))
 
-  def check[T](condition: Response => Boolean, converter: Response => Option[T]): Response => Option[T] = { response =>
+  def check[T](condition: WSResponse => Boolean, converter: WSResponse => Option[T]): WSResponse => Option[T] = { response =>
     if (condition(response)) converter(response) else None
   }
 
   /* Some functions to test special conditions. */
 
   // A result is not found if the status is 404, but if the found property in the JSON is not "false", continue to the error.
-  def resultExists(response: Response): Boolean =
+  def resultExists(response: WSResponse): Boolean =
     found(response) || (response.json \ "found").asOpt[Boolean] != Some(false)
 
-  def resultNotEmpty(response: Response) : Boolean =
+  def resultNotEmpty(response: WSResponse) : Boolean =
     response.json != JsObject(Seq.empty)
 
-  def found(response: Response) : Boolean =
+  def found(response: WSResponse) : Boolean =
     response.status != 404
 
-  def foundOrError(response: Response) : Boolean =
+  def foundOrError(response: WSResponse) : Boolean =
     if (!found(response)) false else convertOrError(_ => true)(response)
 
   /**
    * Apply a converter if the response is successful. Otherwise throw an exception.
    */
-  def convertOrError[T](converter: Response => T): Response => T = {
+  def convertOrError[T](converter: WSResponse => T): WSResponse => T = {
     case response @ Status(200 | 201) => converter(response)
     case response @ Status(status) =>
       val json = response.json
@@ -57,11 +57,11 @@ object ResponseHandlers {
       throw possibleException.getOrElse(unknownStatusCode(status, response))
   }
 
-  def unknownStatusCode(status: Int, response: Response) =
+  def unknownStatusCode(status: Int, response: WSResponse) =
     new RuntimeException(s"Unknown status code $status with body: ${response.body}")
 
   object Status {
-    def unapply(response: Response): Option[Int] =
+    def unapply(response: WSResponse): Option[Int] =
       Some(response.status)
   }
 

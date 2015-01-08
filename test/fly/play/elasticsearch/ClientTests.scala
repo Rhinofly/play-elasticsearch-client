@@ -7,6 +7,7 @@ import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import play.api.test.Helpers.BAD_REQUEST
 import fly.play.elasticsearch.query.{MatchAllQuery, TermQuery}
 import play.api.libs.json.JsArray
+import play.api.test.WithApplication
 
 object ClientTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -16,15 +17,19 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
 
     br
 
-    "work without supplying a slash in the url" in {
+    "work without supplying a slash in the url" in new WithApplication {
       testClientHealth must throwA[Throwable].not
     }
 
-    "work with supplying a slash in the url" in {
+    
+    "work with supplying a slash in the url" in new WithApplication {
       awaitResult(new Client(testUrl + "/").health) must throwA[Throwable].not
     }
+    
+    
+    
 
-    "have an apply and index method to access an index" in {
+    "have an apply and index method to access an index" in new WithApplication {
       testClient("test") must beAnInstanceOf[Client#Index]
       testClient.index("test") must beAnInstanceOf[Client#Index]
     }
@@ -32,30 +37,32 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
     br
 
     "have a health method" >> {
-      "that returns the health of the server" in {
+      "that returns the health of the server" in new WithApplication {
         val result = testClientHealth
         (result \ "cluster_name").as[String] !== ""
       }
 
-      "that accepts parameters" in {
+      "that accepts parameters" in new WithApplication {
         val result = awaitResult(testClient.health("level" -> "indices"))
         (result \ "cluster_name").as[String] !== ""
       }
     }
 
     br
+    
+    
 
     "index should" >> {
 
       "have a create method" >> {
 
-        "that creates an index" in {
+        "that creates an index" in new WithApplication {
           deleteTestIndex
           val result = createTestIndex
-          result === ()
+          result ===( () )
         }
 
-        "that throws an exception if an index exists" in {
+        "that throws an exception if an index exists" in new WithApplication {
           val futureResponse = testIndex.create
           isException(futureResponse, BAD_REQUEST, testIndexName)
         }
@@ -64,12 +71,12 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
 
       "have a delete method" >> {
 
-        "that deletes the index" in {
+        "that deletes the index" in new WithApplication {
           val result = deleteTestIndex
           result === true
         }
 
-        "that fails on an unexisting index" in {
+        "that fails on an unexisting index" in new WithApplication {
           val result = deleteTestIndex
           result === false
         }
@@ -77,33 +84,33 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
 
       "have an exists method" >> {
 
-        "that returns true for an existing index" in {
+        "that returns true for an existing index" in new WithApplication {
           createTestIndex
           existsTestIndex === true
         }
 
-        "that returns false for a non-existing index" in {
+        "that returns false for a non-existing index" in new WithApplication {
           deleteTestIndex
           existsTestIndex === false
         }
 
       }
 
-      "have a refresh method" in {
+      "have a refresh method" in new WithApplication {
         createTestIndex
         val result = refreshTestIndex
         deleteTestIndex
-        result === ()
+        result ===( () )
       }
 
-      "have an analyze method that uses the default analyzer" in {
+      "have an analyze method that uses the default analyzer" in new WithApplication {
         createTestIndex
         val result = awaitResult(testIndex.analyze("to be or not to be, that is the question"))
         deleteTestIndex
         result.length !== 0
       }
 
-      "have an analyze method that uses a specific analyzer" in {
+      "have an analyze method that uses a specific analyzer" in new WithApplication {
         createTestIndex
         val result = analyze("to be or not to be, that is the question", "english")
         deleteTestIndex
@@ -111,14 +118,14 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
         result(0).token === "question"
       }
 
-      "have an apply method to access a type" in {
+      "have an apply method to access a type" in new WithApplication {
         testIndex("test") must beAnInstanceOf[Client#Index#Type]
       }
 
       "type should" >> {
 
         "have an index method" >> {
-          "to add a document with explicit id to an index and type" in new WithTestIndex {
+          "to add a document with explicit id to an index and type" in new WithApplication {
             val version = index(id = "test", doc = Json.obj("test" -> "test"))
             version === 1
           }
@@ -137,10 +144,13 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
 
           "that returns Unit" in new WithTestIndex {
-            awaitResult(testType.index("test", testDocument)) === ()
+            awaitResult(testType.index("test", testDocument)) ===( () )
           }
+          
+          
         }
 
+        
         "have an index method" >> {
           "to add a document to an index and type and generate an id" in new WithTestIndex {
             val (identifier, version) = index(doc = Json.obj("test" -> "test"))
@@ -167,7 +177,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             }
             awaitResult(testType.index(BadDocument("BAD!"))) must throwA[ElasticSearchException]
           }
-
+          
         }
 
         "have a get method" >> {
@@ -191,7 +201,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             optionalTestDocument === None
           }
 
-          "that throws an exception when retrieving from an index that does not exist"  in {
+          "that throws an exception when retrieving from an index that does not exist" in new WithTestIndex {
             if (existsTestIndex) deleteTestIndex else ()
             getV[TestDocument](id = "anything") must throwA[ElasticSearchException]
           }
@@ -210,6 +220,8 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             retrievedDocument === Some(testDocument)
           }
         }
+        
+        
 
         "have a delete method" >> {
 
@@ -265,11 +277,41 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           "that does not return a version" in new WithTestIndex {
             index(id = "test", doc = Json.obj("test" -> "test", "content" -> "content"))
             val result = awaitResult(testType.update(id = "test", doc = Json.obj("content" -> "new content")))
-            result === ()
+            result ===( () )
           }
         }
 
+        "have a bulk method" >> { 
+          "that does a bulk insert" in new WithTestIndex {
+            bulk(Seq(
+              ("1", TestDocument("abc")),
+              ("2", TestDocument("xyz"))
+            ))
+           
+            refreshTestIndex
+            
+            get[TestDocument](id = "1") === Some(TestDocument("abc"))
+            get[TestDocument](id = "2") === Some(TestDocument("xyz"))
+          }
+          
+          "that updates existing documents" in new WithTestIndex {
+            index(id = "1", doc = TestDocument("old"))
+            
+            bulk(Seq(
+              ("1", TestDocument("new")),
+              ("2", TestDocument("xyz"))
+            ))
+           
+            refreshTestIndex
+            
+            get[TestDocument](id = "1") === Some(TestDocument("new"))
+            get[TestDocument](id = "2") === Some(TestDocument("xyz"))
+          }
+        }
+        
+        
         "have a deleteByQuery method" >> {
+
 
           "that deletes documents in a type which match a query" in new WithTestIndex {
             index(id = "test1", doc = Json.obj("test" -> "111"))
@@ -278,6 +320,7 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
             awaitResult(testType.deleteByQuery(TermQuery("test", "222"))) === true
             search[JsObject](MatchAllQuery()).hitsTotal === 1
           }
+
 
           "that deletes all documents in a type with a MatchAllQuery" in new WithTestIndex {
             index(id = "test1", doc = Json.obj("test" -> "111"))
@@ -288,9 +331,13 @@ object ClientTests extends Specification with NoTimeConversions with ClientUtils
           }
 
         }
-
+        
       } // type should
+      
+      
     } // index should
+    
+    
   }
 
 

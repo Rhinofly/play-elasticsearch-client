@@ -13,6 +13,7 @@ import fly.play.elasticsearch.mapping._
 import fly.play.elasticsearch.query.MultiMatchQuery
 import fly.play.elasticsearch.query.TermQuery
 import fly.play.elasticsearch.analysis.{Analysis, StandardAnalyzer}
+import play.api.test.WithApplication
 
 object SettingsTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -20,11 +21,11 @@ object SettingsTests extends Specification with NoTimeConversions with ClientUti
 
     "index should" >> {
 
-      "have a create method that defines settings and mappings for the index" in {
+      "have a create method that defines settings and mappings for the index" in new WithApplication {
         if (existsTestIndex) deleteTestIndex
         val result = createTestIndexWithSettingsAndMapping
         deleteTestIndex
-        result === ()
+        result ===( () )
       }
 
 //      "have a settings method to get the settings" in new WithTestIndexSettingsAndMapping {
@@ -77,14 +78,16 @@ object SettingsTests extends Specification with NoTimeConversions with ClientUti
 
   def createTestIndexWithSettingsAndMapping = awaitResult(testIndex.create(testSettings, Seq(testMapping)))
 
-  abstract class WithTestIndexSettingsAndMapping extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex
-        createTestIndexWithSettingsAndMapping
-      try {
-        AsResult.effectively(t)
-      } finally {
-        deleteTestIndex
+  abstract class WithTestIndexSettingsAndMapping extends WithApplication {
+    override def around[T: AsResult](t: => T): Result = {
+      super.around {
+        if (existsTestIndex) deleteTestIndex
+          createTestIndexWithSettingsAndMapping
+          try {
+            AsResult.effectively(t)
+          } finally {
+            deleteTestIndex
+          }
       }
     }
   }

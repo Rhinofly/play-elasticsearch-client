@@ -1,5 +1,6 @@
 package fly.play.elasticsearch
 
+import play.api.Play.current
 import fly.play.elasticsearch.analysis.AnalyzedToken
 import fly.play.elasticsearch.mapping.Mapping
 import fly.play.elasticsearch.query.ElasticSearchQuery
@@ -7,14 +8,14 @@ import fly.play.elasticsearch.utils.ResponseHandlers._
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json, Reads, Writes}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import play.api.libs.ws.{Response, WS}
-import play.api.libs.ws.Implicits.WSRequestHolderOps
+import play.api.libs.ws.{WSResponse, WS}
 import scala.concurrent.Future
 import scala.language.existentials
 import scala.util.{Failure, Success, Try}
-import com.ning.http.client.Realm.AuthScheme
 
-class Client(elasticSearchUrl: String, credentials: Option[(String, String, AuthScheme)] = None) {
+import play.api.libs.ws.WSAuthScheme
+
+class Client(elasticSearchUrl: String, credentials: Option[(String, String, WSAuthScheme)] = None) {
 
   /* The HTTP requests must have a timeout. Otherwise, `Future`s in Play may hang around forever.
    * We set the timeout to 30 seconds.
@@ -57,7 +58,7 @@ class Client(elasticSearchUrl: String, credentials: Option[(String, String, Auth
         .map(fromJsonOrError[JsObject])
 
     /* Wait for the index creation process to finish. See https://github.com/elasticsearch/elasticsearch/issues/2527 */
-    private val waitForIndexAvailable: Response => Future[Unit] =
+    private val waitForIndexAvailable: WSResponse => Future[Unit] =
       convertOrError(_ =>
         health("wait_for_status" -> "yellow") map {health =>
           if ((health \ "status").as[String] == "red")
@@ -115,13 +116,13 @@ class Client(elasticSearchUrl: String, credentials: Option[(String, String, Auth
       private def url(parameters: Parameter*): RequestHolder =
         url("", parameters: _*)
 
-      private def putWithHandler[T, R](handler: Response => R)(id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
+      private def putWithHandler[T, R](handler: WSResponse => R)(id: Identifier, doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
         Try(writer.writes(doc)) match {
           case Success(body) => url(id, parameters: _*).put(body).map(handler)
           case Failure(error) => Future.failed(ElasticSearchException(500, "Cannot make JSON: "+error, JsNull))
         }
 
-      private def postWithHandler[T, R](handler: Response => R)(doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
+      private def postWithHandler[T, R](handler: WSResponse => R)(doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[R] =
         Try(writer.writes(doc)) match {
           case Success(body) => url(parameters: _*).post(body).map(handler)
           case Failure(error) => Future.failed(ElasticSearchException(500, "Cannot make JSON: "+error, JsNull))
@@ -152,6 +153,17 @@ class Client(elasticSearchUrl: String, credentials: Option[(String, String, Auth
 
       def indexV[T](doc: T, parameters: Parameter*)(implicit writer: Writes[T]): Future[(Identifier, Version)] =
         postWithHandler(convertJsonOrError(json => (Identifier(json) -> Version(json))))(doc, parameters: _*)
+
+      /* Bulk update */
+      def bulk[T](xs:Seq[(Identifier,T)])(implicit writer:Writes[T]):Future[Unit] = {
+        val body = xs.map { case(identifier,item) =>
+          s"""{ "index": { "_index": "${Index.this.name}", "_type": "${name}", "_id": "${identifier}" }}
+             |${writer.writes(item)}
+          """.stripMargin
+        }.mkString
+
+        url("_bulk").post(body).map(unitOrError)
+      }
 
       /* Get: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-get.html */
       def get[T: Reads](id: Identifier, parameters: Parameter*): Future[Option[T]] =
@@ -186,9 +198,9 @@ class Client(elasticSearchUrl: String, credentials: Option[(String, String, Auth
           .map(fromJsonOrError[SearchResult[T]])
 
       /* Delete documents corresponding to a query. See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-delete-by-query.html */
+      // We use a source parameter because Play WS does not support a delete with a body
       def deleteByQuery[T](query: ElasticSearchQuery, parameters: Parameter*): Future[Boolean] =
-        url("_query", parameters: _*).delete(query.toJson).map(foundOrError)
-
+        url("_query", (parameters ++ List(("source", query.toJson.toString))) : _*).delete().map(foundOrError)
     }
   }
 }

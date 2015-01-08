@@ -11,6 +11,7 @@ import fly.play.elasticsearch.{ClientUtils, ElasticSearchException}
 import fly.play.elasticsearch.geo.GeoPointMapping
 import fly.play.elasticsearch.query.MultiMatchQuery
 import fly.play.elasticsearch.query.Query.queryToElasticSearchQuery
+import play.api.test.WithApplication
 
 object MappingTests extends Specification with NoTimeConversions with ClientUtils {
 
@@ -177,10 +178,10 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
 
     "index should" >> {
 
-      "have a create method that defines mappings for the index" in {
+      "have a create method that defines mappings for the index" in new WithApplication {
         if (existsTestIndex) deleteTestIndex
         val result = createTestIndexWithMapping
-        result === ()
+        result ===( () )
       }
 
       "have a mappings method to get the mappings" in new WithTestIndexWithMapping {
@@ -289,12 +290,13 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
 
   def createTestIndexWithMapping = awaitResult(testIndex.create(Seq(testMapping)))
 
-  abstract class WithTestIndexWithMapping extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex
-      createTestIndexWithMapping
-      AsResult.effectively(t)
+  abstract class WithTestIndexWithMapping extends WithApplication {
+    override def around[T: AsResult](t: => T): Result = {
+      super.around {
+        if (existsTestIndex) deleteTestIndex
+        createTestIndexWithMapping
+        AsResult.effectively(t)
+      }
     }
   }
-
 }

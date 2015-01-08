@@ -10,28 +10,32 @@ import fly.play.elasticsearch.{ClientUtils, Settings}
 import fly.play.elasticsearch.utils.JsonUtils
 import fly.play.elasticsearch.mapping.{IndexType, Mapping, NestableMapping, ObjectMapping, StoreType, StringMapping}
 import fly.play.elasticsearch.query.{MatchQuery, MultiMatchQuery, TermQuery}
+import play.api.test.Helpers
+import play.api.test.FakeApplication
+import play.api.test.WithApplication
 
 object AnalysisTests extends Specification with NoTimeConversions with ClientUtils {
 
-  abstract class WithTestIndexWithAnalysis(analysis: Analysis, mapping: NestableMapping) extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex
-      awaitResult( testIndex.create(Settings(analysis = Some(analysis)), Seq(ObjectMapping(testTypeName, properties = Set(mapping)))) )
-      try {
+  abstract class WithTestIndexWithAnalysis(analysis: Analysis, mapping: NestableMapping) extends WithApplication {
+    override def around[T: AsResult](t: => T): Result = {
+      super.around { 
+        if (existsTestIndex) deleteTestIndex
+        awaitResult( testIndex.create(Settings(analysis = Some(analysis)), Seq(ObjectMapping(testTypeName, properties = Set(mapping)))) )
         AsResult.effectively(t)
+        
+        // Leave the testIndex for inspection.
       }
-      // Leave the testIndex for inspection.
     }
   }
 
-  abstract class WithTestIndexWithSimpleAnalysis(analysis: Analysis) extends Scope with Around {
-    def around[T: AsResult](t: => T): Result = {
-      if (existsTestIndex) deleteTestIndex
-      createTestIndex(Settings(analysis = Some(analysis)))
-      try {
+  abstract class WithTestIndexWithSimpleAnalysis(analysis: Analysis) extends WithApplication {
+    override def around[T: AsResult](t: => T): Result = {
+      super.around {
+        if (existsTestIndex) deleteTestIndex
+        createTestIndex(Settings(analysis = Some(analysis)))
         AsResult.effectively(t)
+        // Leave the testIndex for inspection.
       }
-      // Leave the testIndex for inspection.
     }
   }
 
