@@ -1,12 +1,10 @@
 import sbt._
 import Keys._
-
+import sbtrelease.ReleasePlugin.releaseSettings
 
 object ApplicationBuild extends Build {
 
   val appName = "play-elasticsearch-client"
-
-  val appVersion = "0.15-SNAPSHOT"
 
   val appDependencies = {
     val playVersion = "2.3.7"
@@ -33,8 +31,7 @@ object ApplicationBuild extends Build {
     Some("Rhinofly Internal " + repo.capitalize + " Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-" + repo + "-local")
   }
 
-  val main = Project(appName, file(".")).enablePlugins(play.PlayScala).settings(
-    version             :=  appVersion,
+  val main = Project(appName, file(".")).enablePlugins(play.PlayScala).settings(releaseSettings:_*).settings(
     resolvers           :=  appResolvers,
     libraryDependencies ++= appDependencies,
     crossScalaVersions  :=  appCrossScalaVersions,

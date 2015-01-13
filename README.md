@@ -5,9 +5,9 @@ Description
 -----------
 
 This is an ElasticSearch client to be used in applications built in the Play framework.
-It can be used with ElasticSearch version 1.0.0 or higher. Older versions have a different API and will not work.
+It can be used with ElasticSearch version 1.0.1. Older and newer versions have a different API and will not work properly.
 
-The Play 2.1 (or higher) framework is required for its JSON handling capabilities.
+The Play 2.3 framework is required for its JSON handling capabilities.
 
 Installation
 ------------
@@ -34,3 +34,9 @@ Simple usage
 
 ElasticSearch offers many different API's, and this client reflects that. Therefore, it is impossible to give a short overview of the functionality.
 See the unit tests for examples.
+
+
+Release
+-------------
+
+> sbt release
