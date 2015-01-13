@@ -1,6 +1,7 @@
 import sbt._
 import Keys._
 import sbtrelease.ReleasePlugin.releaseSettings
+import sbtrelease.ReleasePlugin.ReleaseKeys.crossBuild
 
 object ApplicationBuild extends Build {
 
@@ -39,6 +40,7 @@ object ApplicationBuild extends Build {
     organization        :=  "nl.rhinofly",
     publishTo           <<= version(rhinoflyRepo),
     credentials         +=  Credentials(Path.userHome / ".ivy2" / ".credentials"),
-    scalacOptions       += "-feature"
+    scalacOptions       += "-feature",
+    crossBuild          := true
   )
 }
