@@ -6,7 +6,7 @@ import org.specs2.specification.Scope
 import org.specs2.time.NoTimeConversions
 import play.api.libs.json.{JsObject, Json}
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
-import fly.play.elasticsearch.mapping.{IndexType, ObjectMapping, StoreType, StringMapping, TermVectorType}
+import fly.play.elasticsearch.mapping.{IndexType, TypeMapping, StoreType, StringMapping, TermVectorType}
 import fly.play.elasticsearch.query.{HighlightField, MatchAllQuery, MultiMatchQuery}
 import fly.play.elasticsearch.query._
 import fly.play.elasticsearch.query.Query.queryToElasticSearchQuery
@@ -220,7 +220,7 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
 
   /* Don't analyze test and sub, which would remove the "a" stopword. */
   val testMapping =
-    ObjectMapping(testTypeName, properties = Set(
+    TypeMapping(testTypeName, properties = Set(
       StringMapping("content", store = StoreType.yes, index = IndexType.analyzed, termVector = TermVectorType.with_positions_offsets),
       StringMapping("extra",   store = StoreType.no,  index = IndexType.analyzed, termVector = TermVectorType.with_positions_offsets),
       StringMapping("test",    store = StoreType.yes, index = IndexType.not_analyzed),
@@ -229,10 +229,10 @@ object ElasticSearchQueryTests extends Specification with NoTimeConversions with
 
   abstract class WithTestIndexWithMapping extends WithApplication {
     override def around[T: AsResult](t: => T): Result = {
-      super.around { 
+      super.around {
         if (existsTestIndex) deleteTestIndex else true
         awaitResult(testIndex.create(Settings(), Seq(testMapping)))
-        AsResult.effectively(t) 
+        AsResult.effectively(t)
       }
     }
   }

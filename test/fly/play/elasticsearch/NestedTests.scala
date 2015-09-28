@@ -56,7 +56,7 @@ class NestedTests extends Specification with NoTimeConversions with ClientUtils 
     override def around[T: AsResult](t: => T): Result = {
       super.around {
         val mapping =
-          ObjectMapping(testTypeName, properties = Set(
+          TypeMapping(testTypeName, properties = Set(
             StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
             NestedMapping("computer", properties = Set(
               StringMapping("make", index = IndexType.not_analyzed), StringMapping("model", index = IndexType.not_analyzed)
@@ -75,17 +75,18 @@ class NestedTests extends Specification with NoTimeConversions with ClientUtils 
     override def around[T: AsResult](t: => T): Result = {
       super.around {
         val mapping =
-          ObjectMapping(testTypeName, properties = Set(
+          TypeMapping(testTypeName, properties = Set(
             StringMapping("name", store = StoreType.yes, index = IndexType.not_analyzed),
             NestedMapping("computer", includeInRoot = true, properties = Set(
               StringMapping("make"), StringMapping("model")
             ))
           ))
+
         if (existsTestIndex) deleteTestIndex
         awaitResult(testIndex.create(Seq(mapping)))
         people map {p => index(doc = p)}
         refreshTestIndex
-        
+
         AsResult.effectively(t)
       }
     }

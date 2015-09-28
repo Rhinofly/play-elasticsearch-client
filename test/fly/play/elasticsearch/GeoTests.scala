@@ -8,7 +8,7 @@ import play.api.libs.functional.syntax.{functionalCanBuildApplicative, toFunctio
 import play.api.libs.json.{Format, JsPath}
 import fly.play.elasticsearch.geo.{GeoBoundingBoxFilter, GeoDistanceFilter, GeoHash, GeoLatLon, GeoPoint, GeoPointMapping}
 import fly.play.elasticsearch.geo.DistanceUnit.{centimeters, kilometers}
-import fly.play.elasticsearch.mapping.{ObjectMapping, StringMapping}
+import fly.play.elasticsearch.mapping.{ObjectMapping, StringMapping, TypeMapping}
 import fly.play.elasticsearch.query.{FilteredQuery, MatchAllQuery}
 import fly.play.elasticsearch.query.Query.queryToElasticSearchQuery
 import play.api.test.WithApplication
@@ -102,7 +102,7 @@ object GeoTests extends Specification with NoTimeConversions with ClientUtils {
 
   def createTestIndexWithMapping =
     awaitResult(testIndex.create(Seq(
-      ObjectMapping(testTypeName, properties = Set(
+      TypeMapping(testTypeName, properties = Set(
         StringMapping("name"),
         GeoPointMapping("position", indexLatLon = true)
       ))
@@ -111,7 +111,7 @@ object GeoTests extends Specification with NoTimeConversions with ClientUtils {
 
   abstract class WithTestIndexWithMapping extends WithApplication {
     override def around[T: AsResult](t: => T): Result = {
-      super.around { 
+      super.around {
         if (existsTestIndex) deleteTestIndex
         createTestIndexWithMapping
         AsResult.effectively(t)

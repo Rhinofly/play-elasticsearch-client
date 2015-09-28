@@ -242,15 +242,6 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
 
     "have a FuzzyLikeThisQuery sub-class" >> {
 
-      "that does not find documents when searching for an exact match" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("test" -> "one two"))
-        index(id = "test2", doc = Json.obj("test" -> "two three"))
-        index(id = "test3", doc = Json.obj("test" -> "three four"))
-        refreshTestIndex
-        val resultExact = search[JsObject](FuzzyLikeThisQuery(fields = Seq("test"), likeText = "tree", fuzziness = "0"))
-        resultExact.hitsTotal === 0
-      }
-
       "that finds documents with a slightly different search term when searching for a fuzzy match" in new WithTestIndex {
         index(id = "test1", doc = Json.obj("test" -> "one two"))
         index(id = "test2", doc = Json.obj("test" -> "two three"))
@@ -276,15 +267,6 @@ object QueryTests extends Specification with NoTimeConversions with ClientUtils 
     }
 
     " have a FuzzyLikeThisFieldQuery sub-class" >> {
-
-      "that does not find documents when searching for an exact match" in new WithTestIndex {
-        index(id = "test1", doc = Json.obj("test" -> "one two"))
-        index(id = "test2", doc = Json.obj("test" -> "two three"))
-        index(id = "test3", doc = Json.obj("test" -> "three four"))
-        refreshTestIndex
-        val resultExact = search[JsObject](FuzzyLikeThisFieldQuery(field = "test", likeText = "tree", fuzziness = "0"))
-        resultExact.hitsTotal === 0
-      }
 
       "that finds documents with a slightly different search term when searching for a fuzzy match" in new WithTestIndex {
         index(id = "test1", doc = Json.obj("test" -> "one two"))

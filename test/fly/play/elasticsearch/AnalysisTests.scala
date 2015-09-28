@@ -8,7 +8,7 @@ import play.api.libs.json.{Format, JsObject, Json, JsPath, JsSuccess, Reads, Wri
 import play.api.libs.json.Json.toJsFieldJsValueWrapper
 import fly.play.elasticsearch.{ClientUtils, Settings}
 import fly.play.elasticsearch.utils.JsonUtils
-import fly.play.elasticsearch.mapping.{IndexType, Mapping, NestableMapping, ObjectMapping, StoreType, StringMapping}
+import fly.play.elasticsearch.mapping.{IndexType, Mapping, NestableMapping, TypeMapping, StoreType, StringMapping}
 import fly.play.elasticsearch.query.{MatchQuery, MultiMatchQuery, TermQuery}
 import play.api.test.Helpers
 import play.api.test.FakeApplication
@@ -18,11 +18,11 @@ object AnalysisTests extends Specification with NoTimeConversions with ClientUti
 
   abstract class WithTestIndexWithAnalysis(analysis: Analysis, mapping: NestableMapping) extends WithApplication {
     override def around[T: AsResult](t: => T): Result = {
-      super.around { 
+      super.around {
         if (existsTestIndex) deleteTestIndex
-        awaitResult( testIndex.create(Settings(analysis = Some(analysis)), Seq(ObjectMapping(testTypeName, properties = Set(mapping)))) )
+        awaitResult( testIndex.create(Settings(analysis = Some(analysis)), Seq(TypeMapping(testTypeName, properties = Set(mapping)))) )
         AsResult.effectively(t)
-        
+
         // Leave the testIndex for inspection.
       }
     }

@@ -253,7 +253,7 @@ object MappingTests extends Specification with NoTimeConversions with ClientUtil
 
 
   val testMapping =
-    ObjectMapping(testTypeName, properties = Set(
+    TypeMapping(testTypeName, properties = Set(
       StringMapping("stringField", store = StoreType.yes, index = IndexType.not_analyzed),
       StringMapping("textField", store = StoreType.yes, index = IndexType.analyzed, analyzer = "simple", boost = 3.0),
       NumberMapping("integerField", NumberType.integer),

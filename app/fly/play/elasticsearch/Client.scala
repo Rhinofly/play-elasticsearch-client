@@ -12,8 +12,8 @@ import play.api.libs.ws.{WSResponse, WS}
 import scala.concurrent.Future
 import scala.language.existentials
 import scala.util.{Failure, Success, Try}
-
 import play.api.libs.ws.WSAuthScheme
+import fly.play.elasticsearch.mapping.TypeMapping
 
 class Client(elasticSearchUrl: String, credentials: Option[(String, String, WSAuthScheme)] = None) {
 
@@ -73,13 +73,13 @@ class Client(elasticSearchUrl: String, credentials: Option[(String, String, WSAu
       url.put(Array.empty[Byte]).flatMap(waitForIndexAvailable)
 
     def create(settings: Settings): Future[Unit] =
-      url.post(settings.toJson).flatMap(waitForIndexAvailable)
+      url.put(settings.toJson).flatMap(waitForIndexAvailable)
 
-    def create(mappings: Seq[Mapping]): Future[Unit] =
-      url.post(Mapping.jsonForMappings(mappings)).flatMap(waitForIndexAvailable)
+    def create(mappings: Seq[TypeMapping]): Future[Unit] =
+      url.put(Mapping.jsonForMappings(mappings)).flatMap(waitForIndexAvailable)
 
-    def create(settings: Settings, mappings: Seq[Mapping]): Future[Unit] =
-      url.post(settings.toJsonWithMappings(mappings)).flatMap(waitForIndexAvailable)
+    def create(settings: Settings, mappings: Seq[TypeMapping]): Future[Unit] =
+      url.put(settings.toJsonWithMappings(mappings)).flatMap(waitForIndexAvailable)
 
     def delete(): Future[Boolean] =
       url.delete.map(foundOrError)

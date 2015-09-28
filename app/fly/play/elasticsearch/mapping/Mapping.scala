@@ -114,7 +114,7 @@ object Mapping {
    */
   def mappingsFromJson(mappings: JsValue): Seq[Mapping] = mappings match {
     case JsObject(Seq( (indexName, JsObject(Seq( ("mappings", jsMappings)))))) => jsMappings match {
-      case JsObject(fields) => fields map {fromJsonRoot(_)}
+      case JsObject(fields) => fields map TypeMapping.fromJson
       case _ => Seq.empty[Mapping]
     }
     case _ => throw ElasticSearchException(-1, "Bad mappings received in mappingsFromJson.", mappings)
