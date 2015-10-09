@@ -1,4 +1,4 @@
-Play 2.1 ElasticSearch Client
+Play 2.4 ElasticSearch Client
 =============================
 
 Description
@@ -7,7 +7,7 @@ Description
 This is an ElasticSearch client to be used in applications built in the Play framework.
 It can be used with ElasticSearch version 1.0.1. Older and newer versions have a different API and will not work properly.
 
-The Play 2.3 framework is required for its JSON handling capabilities.
+The Play 2.4 framework is required for its JSON handling capabilities.
 
 Installation
 ------------
@@ -15,17 +15,19 @@ Installation
 Add a resolver to your project settings:
 
 ``` scala
-val main = play.Project(appName, appVersion, appDependencies, mainLang = SCALA).settings(
-    resolvers += "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local"
+resolvers ++= Seq(
+  "Kaliber Repository" at "https://jars.kaliber.io/artifactory/libs-release-local
 )
 ```
 
 Add the dependency:
 
 ``` scala
-	val appDependencies = Seq(
-      "nl.rhinofly" %% "play-elasticsearch-client" % "x.y"
-    )
+libraryDependencies ++= Seq(
+  "net.kaliber" %% "play-elasticsearch-client" % "0.20"
+  //Play 2.3
+  "net.kaliber" %% "play-elasticsearch-client" % "0.19"
+)
 ```
 
 
